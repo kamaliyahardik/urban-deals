@@ -158,6 +158,7 @@ scripts/
 - `id`: Primary key
 - `name`: Product name
 - `description`: Product description
+- `price`: Product price
 - `affiliate_link`: Amazon affiliate link
 - `image_url`: Product image URL
 - `category`: Product category

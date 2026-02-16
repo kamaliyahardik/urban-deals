@@ -39,8 +39,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`font-sans antialiased`} suppressHydrationWarning>
         <div className="fixed top-6 w-full flex justify-center z-50 pointer-events-none">
           <div className="pointer-events-auto w-full max-w-3xl">
             <Navbar />

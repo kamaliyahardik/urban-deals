@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -10,16 +9,23 @@ import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronLeft, Loader2 } from "lucide-react";
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export default function NewProductPage() {
   const router = useRouter();
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
-    category: "electronics",
+    category: "",
     affiliate_link: "",
     image_url: "",
   });
@@ -32,7 +38,27 @@ export default function NewProductPage() {
       return;
     }
     setAuthenticated(true);
+    fetchCategories();
   }, [router]);
+
+  const fetchCategories = async () => {
+    try {
+      const supabase = createClient();
+      const { data, error: err } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (err) throw err;
+      setCategories(data || []);
+      if (data && data.length > 0) {
+        setFormData((prev) => ({ ...prev, category: data[0].slug }));
+      }
+    } catch (err) {
+      console.error("Failed to load categories", err);
+      // Fallback or just show empty
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -68,6 +94,40 @@ export default function NewProductPage() {
     try {
       const supabase = createClient();
 
+      if (!formData.name.trim()) {
+        throw new Error("Name is required");
+      }
+      const priceNumber = parseFloat(formData.price);
+      if (Number.isNaN(priceNumber)) {
+        throw new Error("Price must be a valid number");
+      }
+      let categoryValue = formData.category;
+      if (!categoryValue) {
+        if (categories.length > 0) {
+          categoryValue = categories[0].slug;
+        } else {
+          categoryValue = "uncategorized";
+        }
+      }
+
+      const baseSlug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      let slug = baseSlug || `product-${Date.now()}`;
+      let suffix = 1;
+      // Ensure unique slug
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: existing } = await supabase
+          .from("products")
+          .select("id")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (!existing) break;
+        slug = `${baseSlug}-${suffix++}`;
+      }
+
       // Insert product
       const { data: productData, error: productError } = await supabase
         .from("products")
@@ -75,9 +135,11 @@ export default function NewProductPage() {
           {
             name: formData.name,
             description: formData.description,
-            category: formData.category,
+            price: priceNumber,
+            category: categoryValue,
             affiliate_link: formData.affiliate_link,
             image_url: formData.image_url,
+            slug: slug,
           },
         ])
         .select()
@@ -102,7 +164,10 @@ export default function NewProductPage() {
 
       router.push("/admin/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create product");
+      const message =
+        (err as any)?.message ??
+        (typeof err === "string" ? err : "Failed to create product");
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -171,6 +236,22 @@ export default function NewProductPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
+                      Price *
+                    </label>
+                    <input
+                      type="number"
+                      name="price"
+                      value={formData.price}
+                      onChange={handleChange}
+                      required
+                      step="0.01"
+                      className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
                       Category
                     </label>
                     <select
@@ -179,10 +260,15 @@ export default function NewProductPage() {
                       onChange={handleChange}
                       className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                      <option value="electronics">Electronics</option>
-                      <option value="home">Home</option>
-                      <option value="sports">Sports</option>
-                      <option value="kitchen">Kitchen</option>
+                      {categories.length > 0 ? (
+                        categories.map((cat) => (
+                          <option key={cat.id} value={cat.slug}>
+                            {cat.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">Loading categories...</option>
+                      )}
                     </select>
                   </div>
                 </div>

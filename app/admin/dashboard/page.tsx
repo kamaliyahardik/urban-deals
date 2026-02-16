@@ -1,78 +1,93 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Plus, LogOut, Edit2, Trash2, Loader2 } from 'lucide-react'
-import Link from 'next/link'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Plus, LogOut, Edit2, Trash2, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface Product {
-  id: number
-  name: string
-  description: string
-  price: number
-  category: string
-  created_at: string
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  created_at: string;
 }
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [authenticated, setAuthenticated] = useState(false)
+  const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  const formatDate = (value?: string) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+  };
 
   useEffect(() => {
     // Check authentication
-    const token = localStorage.getItem('adminToken')
+    const token = localStorage.getItem("adminToken");
     if (!token) {
-      router.push('/admin/login')
-      return
+      router.push("/admin/login");
+      return;
     }
-    setAuthenticated(true)
-    fetchProducts()
-  }, [router])
+    setAuthenticated(true);
+    fetchProducts();
+  }, [router]);
 
   const fetchProducts = async () => {
     try {
-      const supabase = createClient()
+      const supabase = createClient();
       const { data, error: err } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false })
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (err) throw err
-      setProducts(data || [])
+      if (err) throw err;
+      setProducts(data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load products')
+      setError(err instanceof Error ? err.message : "Failed to load products");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken')
-    router.push('/admin/login')
-  }
+    localStorage.removeItem("adminToken");
+    router.push("/admin/login");
+  };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm("Are you sure you want to delete this product?")) return;
 
     try {
-      const supabase = createClient()
-      const { error: err } = await supabase.from('products').delete().eq('id', id)
+      const supabase = createClient();
+      // Delete dependent rows first to satisfy FK constraints
+      await supabase.from("product_values").delete().eq("product_id", id);
+      await supabase.from("reviews").delete().eq("product_id", id);
+      const { error: err } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
 
-      if (err) throw err
-      setProducts(products.filter((p) => p.id !== id))
+      if (err) throw err;
+      setProducts(products.filter((p) => p.id !== id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete product')
+      const message =
+        (err as any)?.message ??
+        (typeof err === "string" ? err : "Failed to delete product");
+      setError(message);
     }
-  }
+  };
 
   if (!authenticated) {
-    return null
+    return null;
   }
 
   return (
@@ -87,6 +102,11 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground">Admin Dashboard</p>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/admin/dashboard/categories">
+              <Button variant="outline" className="gap-2">
+                Manage Categories
+              </Button>
+            </Link>
             <Link href="/admin/dashboard/new">
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
@@ -127,35 +147,53 @@ export default function AdminDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">Product Name</th>
-                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">Category</th>
-                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">Price</th>
-                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">Created</th>
-                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">Actions</th>
+                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">
+                      Product Name
+                    </th>
+                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">
+                      Category
+                    </th>
+                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">
+                      Created
+                    </th>
+                    <th className="text-left px-6 py-4 font-semibold text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.length > 0 ? (
                     products.map((product) => (
-                      <tr key={product.id} className="border-b border-border hover:bg-secondary/50 transition">
+                      <tr
+                        key={product.id}
+                        className="border-b border-border hover:bg-secondary/50 transition"
+                      >
                         <td className="px-6 py-4">
                           <div>
-                            <p className="font-medium line-clamp-1">{product.name}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-1">{product.description}</p>
+                            <p className="font-medium line-clamp-1">
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-muted-foreground line-clamp-1">
+                              {product.description}
+                            </p>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className="inline-block px-3 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded-full">
-                            {product.category || 'Uncategorized'}
+                            {product.category}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-muted-foreground">
-                          {new Date(product.created_at).toLocaleDateString()}
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {formatDate(product.created_at)}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <Link href={`/admin/dashboard/edit/${product.id}`}>
-                              <Button variant="outline" size="sm" className="gap-1 bg-transparent">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 bg-transparent"
+                              >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
                             </Link>
@@ -171,8 +209,11 @@ export default function AdminDashboard() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center">
-                        <p className="text-muted-foreground">No products yet. Create your first product to get started.</p>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <p className="text-muted-foreground">
+                          No products yet. Create your first product to get
+                          started.
+                        </p>
                       </td>
                     </tr>
                   )}
@@ -183,5 +224,5 @@ export default function AdminDashboard() {
         )}
       </div>
     </div>
-  )
+  );
 }

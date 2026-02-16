@@ -17,84 +17,75 @@ const HeroSection = () => {
         `}
       </style>
 
- <section className="flex flex-col items-center bg-linear-to-b from-[#D9D9FF] to-[#F8F3F9] px-4 py-4">
+ <section className="flex flex-col items-center bg-background px-4 py-4">
         {/* Badge */}
-        <div className="flex flex-wrap items-center justify-center gap-2 pl-2 pr-4 py-1.5 mt-30 rounded-full bg-white/50 border border-white">
+        <div className="flex flex-wrap items-center justify-center gap-2 pl-2 pr-4 py-1.5 mt-30 rounded-full bg-secondary/50 border border-border">
           <div className="relative flex size-3.5 items-center justify-center">
             <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping duration-300"></span>
             <span className="relative inline-flex size-2 rounded-full bg-green-600"></span>
           </div>
-          <p className="text-sm text-black/60">
-            Join 12,450+ brands growing with us
+          <p className="text-sm text-muted-foreground">
+            Trusted by 100+ smart shoppers worldwide
           </p>
         </div>
 
         {/* Heading */}
-        <h1 className="text-4xl md:text-[66px]/19 text-center max-w-2xl mt-8 text-gray-800 bg-clip-text leading-tight font-medium">
-          Websites built to perform beautifully.
+        <h1 className="text-4xl md:text-[66px]/19 text-center max-w-2xl mt-8 text-foreground bg-clip-text leading-tight font-medium">
+          Discover products that truly deliver.
         </h1>
 
         {/* Sub text */}
-        <p className="text-sm text-gray-600 text-center max-w-[630px] mt-4">
-          We design high-impact websites that convert and scale. From sleek
-          interfaces to full stack experiences, we bring your brand to life
-          online.
+        <p className="text-sm text-muted-foreground text-center max-w-[630px] mt-4">
+          We curate top-rated, value-for-money products across categories to help you make confident buying decisions. From honest reviews to detailed comparisons, we simplify your shopping journey.
         </p>
 
-        {/* Buttons with Next Link */}
+        {/* Buttons with Next Link
         <div className="flex gap-3 mt-10">
           <Link
-            href="/get-started"
-            className="inline-block bg-violet-600 hover:bg-violet-700 text-white text-xs md:text-sm px-6 py-3 rounded-lg transition cursor-pointer"
+            href="/products"
+            className="inline-block bg-primary hover:bg-primary/90 text-primary-foreground text-xs md:text-sm px-6 py-3 rounded-lg transition cursor-pointer"
           >
-            Get Started Now
+            Explore Products
           </Link>
-
-          <Link
-            href="/demo"
-            className="inline-block bg-white hover:bg-white/5 border border-violet-400 text-gray-600 text-xs md:text-sm px-5 py-3 rounded-lg transition cursor-pointer"
-          >
-            Book a demo
-          </Link>
-        </div>
+        </div> */}
 
         {/* Divider */}
-        <div className="w-full max-w-[800px] h-[3px] mt-10 bg-linear-to-r from-white/10 via-violet-600 to-white/10"></div>
+        <div className="w-full max-w-[800px] h-[3px] mt-10 bg-linear-to-r from-background via-primary to-background"></div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-18 max-w-[930px] w-full">
           <div className="text-center">
-            <h2 className="font-medium text-2xl md:text-3xl text-gray-800">
+            <h2 className="font-medium text-2xl md:text-3xl text-foreground">
               20+
             </h2>
-            <p className="text-xs md:text-sm text-gray-500">
-              Years Experience
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Years of Experience in Product Research
             </p>
           </div>
 
           <div className="text-center">
-            <h2 className="font-medium text-2xl md:text-3xl text-gray-800">
+            <h2 className="font-medium text-2xl md:text-3xl text-foreground">
               12k+
             </h2>
-            <p className="text-xs md:text-sm text-gray-500">
-              Projects Completed
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Products Reviewed & Compared
             </p>
           </div>
 
           <div className="text-center">
-            <h2 className="font-medium text-2xl md:text-3xl text-gray-800">
+            <h2 className="font-medium text-2xl md:text-3xl text-foreground">
               5k+
             </h2>
-            <p className="text-xs md:text-sm text-gray-500">
-              Happy Customers
+            <p className="text-xs md:text-sm text-muted-foreground">
+              Happy Readers Every Month
             </p>
           </div>
 
           <div className="text-center">
-            <h2 className="font-medium text-2xl md:text-3xl text-gray-800">
+            <h2 className="font-medium text-2xl md:text-3xl text-foreground">
               5+
             </h2>
-            <p className="text-xs md:text-sm text-gray-500">Countries</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Countries Reached</p>
           </div>
         </div>
       </section>

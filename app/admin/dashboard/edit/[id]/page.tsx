@@ -15,6 +15,12 @@ interface ProductValue {
   value_text: string;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
@@ -24,10 +30,11 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "electronics",
+    category: "",
     affiliate_link: "",
     image_url: "",
   });
@@ -41,13 +48,23 @@ export default function EditProductPage() {
       return;
     }
     setAuthenticated(true);
-    fetchProduct();
+    fetchData();
   }, [productId, router]);
 
-  const fetchProduct = async () => {
+  const fetchData = async () => {
     try {
       const supabase = createClient();
 
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (categoriesError) console.error("Error fetching categories:", categoriesError);
+      setCategories(categoriesData || []);
+
+      // Fetch product
       const { data: productData, error: productError } = await supabase
         .from("products")
         .select("*")
@@ -59,11 +76,12 @@ export default function EditProductPage() {
       setFormData({
         name: productData.name,
         description: productData.description || "",
-        category: productData.category || "electronics",
+        category: productData.category || "",
         affiliate_link: productData.affiliate_link || "",
         image_url: productData.image_url || "",
       });
 
+      // Fetch values
       const { data: valuesData, error: valuesError } = await supabase
         .from("product_values")
         .select("*")
@@ -234,10 +252,15 @@ export default function EditProductPage() {
                         onChange={handleChange}
                         className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                       >
-                        <option value="electronics">Electronics</option>
-                        <option value="home">Home</option>
-                        <option value="sports">Sports</option>
-                        <option value="kitchen">Kitchen</option>
+                        {categories.length > 0 ? (
+                          categories.map((cat) => (
+                            <option key={cat.id} value={cat.slug}>
+                              {cat.name}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Loading categories...</option>
+                        )}
                       </select>
                     </div>
                   </div>

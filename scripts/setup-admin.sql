@@ -7,10 +7,11 @@ VALUES ('admin@example.com', 'YWRtaW4xMjM=')
 ON CONFLICT (email) DO NOTHING;
 
 -- Add some sample products for demonstration
-INSERT INTO products (name, description, category, affiliate_link, image_url) VALUES
+INSERT INTO products (name, description, price, category, affiliate_link, image_url) VALUES
 (
   'Premium Wireless Headphones',
   'High-quality wireless headphones with noise cancellation and 30-hour battery life',
+  149.99,
   'electronics',
   'https://amazon.com/s?k=wireless+headphones',
   'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
@@ -18,6 +19,7 @@ INSERT INTO products (name, description, category, affiliate_link, image_url) VA
 (
   '4K Smart TV 55-inch',
   '55-inch 4K Smart TV with HDR support and smart apps integration',
+  599.99,
   'electronics',
   'https://amazon.com/s?k=4k+smart+tv',
   'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&q=80'
@@ -25,6 +27,7 @@ INSERT INTO products (name, description, category, affiliate_link, image_url) VA
 (
   'Coffee Maker Pro',
   'Programmable coffee maker with thermal carafe and brew strength control',
+  89.99,
   'kitchen',
   'https://amazon.com/s?k=coffee+maker',
   'https://images.unsplash.com/photo-1517668808822-9ebb02ae2a0e?w=400&q=80'

@@ -15,11 +15,13 @@ interface Product {
   image_url: string;
   category: string;
   created_at: string;
+  slug: string;
 }
 
-interface ProductsResponse extends Product {
-  product_values?: Array<{ value_text: string }>;
-  reviews?: Array<{ rating: number }>;
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
 }
 
 export default function ProductsPage() {
@@ -27,11 +29,27 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState<string[]>(["all"]);
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       try {
         const supabase = createClient();
+        
+        // Fetch categories
+        const { data: catData, error: catError } = await supabase
+          .from("categories")
+          .select("slug")
+          .order("name", { ascending: true });
+        
+        if (!catError && catData) {
+            setCategories(["all", ...catData.map(c => c.slug)]);
+        } else {
+            // Fallback if categories table is empty or error
+            setCategories(["all", "electronics", "home", "sports", "kitchen"]);
+        }
+
+        // Fetch products
         let query = supabase.from("products").select("*");
 
         if (selectedCategory !== "all") {
@@ -53,10 +71,8 @@ export default function ProductsPage() {
       }
     }
 
-    fetchProducts();
+    fetchData();
   }, [selectedCategory]);
-
-  const categories = ["all", "electronics", "home", "sports", "kitchen"];
 
   return (
     <div className="min-h-screen bg-background pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -174,7 +190,7 @@ function ProductCard({ product }: { product: Product }) {
 
         {/* CTA */}
         <div className="flex gap-2">
-          <Link href={`/products/${product.id}`} className="flex-1">
+          <Link href={`/products/${product.slug || product.id}`} className="flex-1">
             <Button variant="outline" className="w-full bg-transparent">
               View Details
             </Button>
