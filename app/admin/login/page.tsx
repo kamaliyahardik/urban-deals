@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-card to-background flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen `bg-gradient-to-br` from-background via-card to-background flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md p-8">
         <div className="mb-8">
           <Link href="/" className="text-2xl font-bold text-primary">

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronLeft, Loader2 } from "lucide-react";
+import { AutoFetchBar } from "@/components/admin/auto-fetch-bar";
+import type { ProductDraft } from "@/lib/product-fetcher";
 
 interface ProductValue {
   id: number;
@@ -40,6 +42,7 @@ export default function EditProductPage() {
   });
   const [values, setValues] = useState<ProductValue[]>([]);
   const [newValues, setNewValues] = useState<string[]>([""]);
+  const [extras, setExtras] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     const token = localStorage.getItem("adminToken");
@@ -80,6 +83,20 @@ export default function EditProductPage() {
         affiliate_link: productData.affiliate_link || "",
         image_url: productData.image_url || "",
       });
+      setExtras({
+        mrp: productData.mrp ?? null,
+        discount_percent: productData.discount_percent ?? null,
+        currency: productData.currency ?? "INR",
+        brand: productData.brand ?? "",
+        sku: productData.sku ?? "",
+        source: productData.source ?? "",
+        rating: productData.rating ?? null,
+        review_count: productData.review_count ?? null,
+        availability: productData.availability ?? "",
+        images: Array.isArray(productData.images) ? productData.images : [],
+        specs: Array.isArray(productData.specs) ? productData.specs : [],
+        reviews: Array.isArray(productData.reviews) ? productData.reviews : [],
+      });
 
       // Fetch values
       const { data: valuesData, error: valuesError } = await supabase
@@ -115,6 +132,33 @@ export default function EditProductPage() {
     setNewValues(newVals);
   };
 
+  const handleAutoFilled = (draft: ProductDraft) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: draft.name || prev.name,
+      description: draft.description || prev.description,
+      image_url: draft.image_url || prev.image_url,
+    }));
+    setExtras({
+      mrp: draft.mrp ?? null,
+      discount_percent: draft.discount_percent ?? null,
+      currency: draft.currency || "INR",
+      brand: draft.brand ?? "",
+      sku: draft.sku ?? "",
+      source: draft.source ?? "",
+      rating: draft.rating ?? null,
+      review_count: draft.review_count ?? null,
+      availability: draft.availability ?? "",
+      images: draft.images ?? [],
+      specs: draft.specs ?? [],
+      reviews: draft.reviews ?? [],
+    });
+    const features = draft.features.filter((f) => f.trim());
+    if (features.length) {
+      setNewValues(features);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -123,7 +167,7 @@ export default function EditProductPage() {
     try {
       const supabase = createClient();
 
-      // Update product
+      // Update product (with all A-to-Z fetched extras)
       const { error: updateError } = await supabase
         .from("products")
         .update({
@@ -132,6 +176,7 @@ export default function EditProductPage() {
           category: formData.category,
           affiliate_link: formData.affiliate_link,
           image_url: formData.image_url,
+          ...extras,
           updated_at: new Date().toISOString(),
         })
         .eq("id", productId);
@@ -199,7 +244,14 @@ export default function EditProductPage() {
           </div>
         ) : (
           <Card className="p-8">
-            <h1 className="text-3xl font-bold mb-8">Edit Product</h1>
+            <h1 className="text-3xl font-bold mb-2">Edit Product</h1>
+            <p className="text-muted-foreground mb-6 text-sm">
+              Need to refresh details? Paste the product link to auto-fill the
+              fields below.
+            </p>
+            <div className="mb-8">
+              <AutoFetchBar onFilled={handleAutoFilled} />
+            </div>
 
             {error && (
               <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">

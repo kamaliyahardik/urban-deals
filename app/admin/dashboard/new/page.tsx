@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronLeft, Loader2 } from "lucide-react";
+import { AutoFetchBar } from "@/components/admin/auto-fetch-bar";
+import type { ProductDraft } from "@/lib/product-fetcher";
 
 interface Category {
   id: number;
@@ -28,6 +30,40 @@ export default function NewProductPage() {
     category: "",
     affiliate_link: "",
     image_url: "",
+  });
+  // A-to-Z fetched extras (saved alongside the product)
+  const [extras, setExtras] = useState<{
+    mrp: number | null;
+    discount_percent: number | null;
+    currency: string;
+    brand: string;
+    sku: string;
+    source: string;
+    rating: number | null;
+    review_count: number | null;
+    availability: string;
+    images: string[];
+    specs: { key: string; value: string }[];
+    reviews: {
+      author: string;
+      rating: number | null;
+      title: string;
+      body: string;
+      date: string | null;
+    }[];
+  }>({
+    mrp: null,
+    discount_percent: null,
+    currency: "INR",
+    brand: "",
+    sku: "",
+    source: "",
+    rating: null,
+    review_count: null,
+    availability: "",
+    images: [],
+    specs: [],
+    reviews: [],
   });
   const [values, setValues] = useState<string[]>([""]);
 
@@ -86,6 +122,41 @@ export default function NewProductPage() {
     setValues(values.filter((_, i) => i !== index));
   };
 
+  const handleAutoFilled = (draft: ProductDraft) => {
+    setFormData((prev) => ({
+      ...prev,
+      // Only overwrite fields that were left empty — admin never loses typed data
+      name: prev.name.trim() || draft.name || prev.name,
+      description: prev.description.trim() || draft.description || prev.description,
+      price:
+        !prev.price || Number.isNaN(parseFloat(prev.price))
+          ? draft.price != null
+            ? String(draft.price)
+            : prev.price
+          : prev.price,
+      image_url: prev.image_url.trim() || draft.image_url || prev.image_url,
+      affiliate_link: prev.affiliate_link.trim() || draft.canonical_url || prev.affiliate_link,
+    }));
+    setExtras({
+      mrp: draft.mrp ?? null,
+      discount_percent: draft.discount_percent ?? null,
+      currency: draft.currency || "INR",
+      brand: draft.brand ?? "",
+      sku: draft.sku ?? "",
+      source: draft.source ?? "",
+      rating: draft.rating ?? null,
+      review_count: draft.review_count ?? null,
+      availability: draft.availability ?? "",
+      images: draft.images ?? [],
+      specs: draft.specs ?? [],
+      reviews: draft.reviews ?? [],
+    });
+    const features = draft.features.filter((f) => f.trim());
+    if (features.length) {
+      setValues(features.length ? features : [""]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -128,7 +199,7 @@ export default function NewProductPage() {
         slug = `${baseSlug}-${suffix++}`;
       }
 
-      // Insert product
+      // Insert product (with all A-to-Z fetched extras)
       const { data: productData, error: productError } = await supabase
         .from("products")
         .insert([
@@ -140,6 +211,18 @@ export default function NewProductPage() {
             affiliate_link: formData.affiliate_link,
             image_url: formData.image_url,
             slug: slug,
+            mrp: extras.mrp,
+            discount_percent: extras.discount_percent,
+            currency: extras.currency,
+            brand: extras.brand,
+            sku: extras.sku,
+            source: extras.source,
+            rating: extras.rating,
+            review_count: extras.review_count,
+            availability: extras.availability,
+            images: extras.images,
+            specs: extras.specs,
+            reviews: extras.reviews,
           },
         ])
         .select()
@@ -189,7 +272,14 @@ export default function NewProductPage() {
         </Link>
 
         <Card className="p-8">
-          <h1 className="text-3xl font-bold mb-8">Add New Product</h1>
+          <h1 className="text-3xl font-bold mb-2">Add New Product</h1>
+          <p className="text-muted-foreground mb-6 text-sm">
+            Manually fill the form below, or paste a product link and let it
+            auto-fill everything.
+          </p>
+          <div className="mb-8">
+            <AutoFetchBar onFilled={handleAutoFilled} />
+          </div>
 
           {error && (
             <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
@@ -289,7 +379,7 @@ export default function NewProductPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Amazon Affiliate Link
+                    Product / Affiliate Link
                   </label>
                   <input
                     type="url"
@@ -297,7 +387,7 @@ export default function NewProductPage() {
                     value={formData.affiliate_link}
                     onChange={handleChange}
                     className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="https://amazon.com/..."
+                    placeholder="https://www.amazon.in/dp/... | https://flipkart.com/... | https://myntra.com/..."
                   />
                 </div>
               </div>

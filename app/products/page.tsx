@@ -11,11 +11,18 @@ interface Product {
   id: number;
   name: string;
   description: string;
+  price: number;
   affiliate_link: string;
   image_url: string;
   category: string;
   created_at: string;
   slug: string;
+  // A-to-Z fields (absent on legacy products)
+  mrp?: number | null;
+  discount_percent?: number | null;
+  rating?: number | null;
+  review_count?: number | null;
+  source?: string | null;
 }
 
 interface Category {
@@ -144,54 +151,91 @@ export default function ProductsPage() {
   );
 }
 
+function Stars({ value, size = 14 }: { value: number; size?: number }) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          style={{ width: size, height: size }}
+          className={
+            i <= Math.round(value)
+              ? "text-yellow-400 fill-yellow-400"
+              : "text-muted-foreground/25 fill-transparent"
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 function ProductCard({ product }: { product: Product }) {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 rounded-2xl">
       {/* Image */}
-      {product.image_url && (
-        <div className="relative w-full h-48 bg-muted overflow-hidden">
+      <Link href={`/products/${product.slug || product.id}`} className="block">
+        <div className="relative w-full h-64 sm:h-72 bg-gradient-to-br from-white to-primary/[0.05] overflow-hidden">
           <img
             src={product.image_url || "/placeholder.svg"}
             alt={product.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform"
+            className="w-full h-full object-contain p-6 sm:p-8 hover:scale-110 transition-transform duration-500"
           />
+          {product.discount_percent != null && product.discount_percent > 0 && (
+            <span className="absolute top-4 left-4 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-600/25">
+              {product.discount_percent}% OFF
+            </span>
+          )}
+          {product.rating != null && (
+            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur text-xs font-bold text-amber-600 shadow-sm">
+              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+              {product.rating}
+            </span>
+          )}
         </div>
-      )}
+      </Link>
 
       {/* Content */}
-      <div className="p-6">
-        <h3 className="text-xl font-semibold mb-2 line-clamp-2">
-          {product.name}
-        </h3>
+      <div className="p-5 sm:p-6">
+        <Link href={`/products/${product.slug || product.id}`}>
+          <h3 className="text-lg sm:text-xl font-semibold mb-2 line-clamp-2 hover:text-primary transition-colors leading-snug">
+            {product.name}
+          </h3>
+        </Link>
 
-        {/* Description */}
-        <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-          {product.description}
-        </p>
+        {/* Price */}
+        <div className="flex items-baseline gap-2 mb-4">
+          <span className="text-2xl font-bold text-primary">
+            ₹{product.price.toLocaleString("en-IN")}
+          </span>
+          {product.mrp != null && product.mrp > product.price && (
+            <span className="text-sm text-muted-foreground line-through">
+              ₹{product.mrp.toLocaleString("en-IN")}
+            </span>
+          )}
+        </div>
 
-        {/* Category */}
-        {product.category && (
-          <div className="mb-4">
-            <span className="inline-block px-3 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded-full">
+        {/* Category + buy info */}
+        <div className="flex items-center justify-between mb-4">
+          {product.category ? (
+            <span className="inline-block px-3 py-1 bg-secondary text-secondary-foreground text-xs font-medium rounded-full capitalize">
               {product.category}
             </span>
-          </div>
-        )}
-
-        {/* Rating placeholder */}
-        <div className="flex items-center gap-1 mb-6">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-          ))}
-          <span className="text-sm text-muted-foreground ml-2">
-            (12 reviews)
-          </span>
+          ) : (
+            <span />
+          )}
+          {(product.rating != null || product.review_count != null) && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+              {product.rating != null && <Stars value={product.rating} size={12} />}
+              {product.review_count != null &&
+                `${product.review_count.toLocaleString("en-IN")} ratings`}
+            </span>
+          )}
         </div>
 
         {/* CTA */}
-        <div className="flex gap-2">
+        <div className="flex gap-2.5 pt-4 border-t border-border/60">
           <Link href={`/products/${product.slug || product.id}`} className="flex-1">
-            <Button variant="outline" className="w-full bg-transparent">
+            <Button variant="outline" className="w-full h-11 bg-transparent rounded-xl font-semibold">
               View Details
             </Button>
           </Link>
@@ -200,8 +244,9 @@ function ProductCard({ product }: { product: Product }) {
               href={product.affiliate_link}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Buy ${product.name} now`}
             >
-              <Button className="gap-2">
+              <Button className="h-11 gap-2 px-4 rounded-xl font-semibold shadow-md shadow-primary/20">
                 Buy Now
                 <ExternalLink className="w-4 h-4" />
               </Button>
