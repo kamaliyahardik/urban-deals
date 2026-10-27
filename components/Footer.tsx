@@ -1,24 +1,45 @@
+"use client";
+
 import Link from "next/link";
-import { Github, Instagram, Twitter, Youtube, Heart, MapPin } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+  Github,
+  Instagram,
+  Twitter,
+  Youtube,
+  ArrowUp,
+  BadgeCheck,
+  ChevronRight,
+} from "lucide-react";
+import { BrandMark } from "@/components/Logo";
 
-const shopLinks = [
-  { label: "All Products", href: "/products" },
-  { label: "Electronics", href: "/products?category=electronics" },
-  { label: "Fashion", href: "/products?category=fashion" },
-  { label: "Home", href: "/products?category=home" },
-  { label: "Kitchen", href: "/products?category=kitchen" },
-];
-
-const companyLinks = [
-  { label: "About Us", href: "/about" },
-  { label: "Contact", href: "/contact" },
-  { label: "Add a Product", href: "/admin/login" },
-];
-
-const legalLinks = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Disclaimer", href: "#" },
-  { label: "Terms of Use", href: "#" },
+const linkGroups = [
+  {
+    title: "Shop",
+    links: [
+      { label: "All Products", href: "/products" },
+      { label: "Electronics", href: "/category/electronics" },
+      { label: "Fashion", href: "/category/fashion" },
+      { label: "Home", href: "/category/home" },
+      { label: "Kitchen", href: "/category/kitchen" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { label: "About Us", href: "/about" },
+      { label: "Contact", href: "/contact" },
+      { label: "Add a Product", href: "/admin/login" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "/privacy" },
+      { label: "Disclaimer", href: "/disclaimer" },
+      { label: "Terms of Use", href: "/terms" },
+    ],
+  },
 ];
 
 const socials = [
@@ -29,47 +50,60 @@ const socials = [
 ];
 
 export default function Footer() {
-  return (
-    <footer className="relative mt-20">
-      {/* Gradient hairline */}
-      <div className="h-px w-full bg-gradient-to-r from-transparent via-violet-500/60 to-transparent" />
+  const pathname = usePathname();
 
-      <div className="glass rounded-t-3xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8">
-          <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-            {/* Brand */}
-            <div>
-              <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
-                <svg width="34" height="34" viewBox="0 0 40 40" fill="none">
-                  <defs>
-                    <linearGradient id="footGrad" x1="6" y1="6" x2="34" y2="34">
-                      <stop offset="0%" stopColor="#8b5cf6" />
-                      <stop offset="100%" stopColor="#d946ef" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="m12.75 8.3 6.75 3.884L26.25 8.3m-13.5 23.28v-7.755L6 19.94m27 0-6.75 3.885v7.754M6.405 12.408 19.5 19.954l13.095-7.546M19.5 35V19.94M33 25.914V13.962a2.98 2.98 0 0 0-1.5-2.585L21 5.4a3.01 3.01 0 0 0-3 0L7.5 11.377A3 3 0 0 0 6 13.962v11.953A2.98 2.98 0 0 0 7.5 28.5L18 34.477a3.01 3.01 0 0 0 3 0L31.5 28.5a3 3 0 0 0 1.5-2.585"
-                    stroke="url(#footGrad)"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="font-bold text-lg bg-gradient-to-r from-violet-700 to-fuchsia-600 bg-clip-text text-transparent">
-                  AffiliatePro
+  // No footer inside the admin panel
+  if (pathname?.startsWith("/admin")) return null;
+
+  return (
+    <footer className="relative bg-background">
+      {/* clean, solid slab — no colour bleeding from behind */}
+      <div className="border-t border-border/70 bg-card">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* top row — brand + link columns */}
+          <div className="py-12 sm:py-16 grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+            {/* brand */}
+            <div className="max-w-sm">
+              <Link href="/" className="inline-flex items-center gap-2.5 mb-5">
+                <BrandMark className="w-9 h-9 text-primary" />
+                <span className="flex flex-col leading-none">
+                  <span className="flex items-start">
+                    <span className="font-extrabold tracking-[0.08em] text-base">
+                      URBAN
+                    </span>
+                    <span className="text-[8px] font-bold text-primary ml-0.5 mt-0.5">®</span>
+                  </span>
+                  <span className="font-light tracking-[0.32em] text-[11px] text-primary mt-0.5">
+                    DEALS
+                  </span>
                 </span>
               </Link>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mb-5">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
                 Hand-picked deals from Amazon, Flipkart &amp; Myntra — honest
-                specs, real reviews, smart prices.
+                specs, real reviews, smart prices. Nothing else on the shelf
+                makes the cut.
               </p>
+
+              {/* trust chips */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-bold text-muted-foreground">
+                  <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+                  Verified sellers only
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-[11px] font-bold text-muted-foreground">
+                  <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+                  No paid placements
+                </span>
+              </div>
+
+              {/* socials */}
               <div className="flex items-center gap-2">
                 {socials.map((s) => (
                   <a
                     key={s.label}
                     href={s.href}
                     aria-label={s.label}
-                    className="p-2.5 rounded-xl border border-border/70 bg-card hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all hover:-translate-y-0.5"
+                    className="p-2.5 rounded-xl border border-border/70 bg-background text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-all hover:-translate-y-0.5"
                   >
                     {s.icon}
                   </a>
@@ -77,76 +111,47 @@ export default function Footer() {
               </div>
             </div>
 
-            {/* Shop */}
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-wider text-foreground/80 mb-4">
-                Shop
-              </h4>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
-                {shopLinks.map((l) => (
-                  <li key={l.label}>
-                    <Link
-                      href={l.href}
-                      className="hover:text-primary hover:underline underline-offset-4 transition"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-wider text-foreground/80 mb-4">
-                Company
-              </h4>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
-                {companyLinks.map((l) => (
-                  <li key={l.label}>
-                    <Link
-                      href={l.href}
-                      className="hover:text-primary hover:underline underline-offset-4 transition"
-                    >
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h4 className="font-bold text-sm uppercase tracking-wider text-foreground/80 mb-4">
-                Legal
-              </h4>
-              <ul className="space-y-2.5 text-sm text-muted-foreground">
-                {legalLinks.map((l) => (
-                  <li key={l.label}>
-                    <a
-                      href={l.href}
-                      className="hover:text-primary hover:underline underline-offset-4 transition"
-                    >
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-6">
-                <MapPin className="w-3.5 h-3.5" /> Made with
-                <Heart className="w-3 h-3 fill-rose-500 text-rose-500" />
-                in India
-              </p>
-            </div>
+            {/* link columns */}
+            {linkGroups.map((g) => (
+              <div key={g.title}>
+                <h4 className="flex items-center gap-2 font-bold text-[13px] uppercase tracking-wider text-foreground/80 mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  {g.title}
+                </h4>
+                <ul className="space-y-1 text-sm">
+                  {g.links.map((l) => (
+                    <li key={l.label}>
+                      <Link
+                        href={l.href}
+                        className="group inline-flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors py-1.5"
+                      >
+                        {l.label}
+                        <ChevronRight className="w-3.5 h-3.5 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          {/* Disclosure + bottom bar */}
-          <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
-            <p>
-              As an <span className="font-semibold">Amazon Associate</span>, we
-              earn from qualifying purchases.
+          {/* bottom bar */}
+          <div className="border-t border-border/60 py-5 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+            <p className="text-center md:text-left">
+              As an <span className="font-semibold text-foreground/70">Amazon Associate</span>,
+              Urban Deals earns from qualifying purchases — at no extra cost to you.
             </p>
-            <p>&copy; {new Date().getFullYear()} AffiliatePro. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <p>&copy; {new Date().getFullYear()} Urban Deals</p>
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                aria-label="Back to top"
+                className="shrink-0 w-9 h-9 rounded-xl border border-border bg-card text-muted-foreground hover:bg-primary hover:text-white hover:border-primary transition-colors flex items-center justify-center"
+              >
+                <ArrowUp className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

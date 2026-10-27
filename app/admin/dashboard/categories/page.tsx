@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { getAdminToken } from '@/lib/admin-auth'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, LogOut, Trash2, Loader2, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+import { Plus, Trash2, Loader2, LayoutGrid } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 interface Category {
@@ -26,10 +26,11 @@ export default function CategoriesPage() {
   const [error, setError] = useState<string | null>(null)
   const [authenticated, setAuthenticated] = useState(false)
   const [newCategory, setNewCategory] = useState('')
+  const [counts, setCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     // Check authentication
-    const token = localStorage.getItem('adminToken')
+    const token = getAdminToken()
     if (!token) {
       router.push('/admin/login')
       return
@@ -48,16 +49,24 @@ export default function CategoriesPage() {
 
       if (err) throw err
       setCategories(data || [])
+
+      // how many products use each category
+      const { data: prods, error: prodErr } = await supabase
+        .from('products')
+        .select('category')
+      if (!prodErr && prods) {
+        const tally: Record<string, number> = {}
+        for (const p of prods as { category?: string | null }[]) {
+          const key = (p.category ?? '').trim().toLowerCase()
+          if (key) tally[key] = (tally[key] ?? 0) + 1
+        }
+        setCounts(tally)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load categories')
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken')
-    router.push('/admin/login')
   }
 
   const handleDelete = async (id: number) => {
@@ -118,84 +127,116 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-             <Link href="/admin/dashboard" className="text-muted-foreground hover:text-foreground">
-               <ArrowLeft className="w-5 h-5" />
-             </Link>
-            <div>
-              <Link href="/" className="text-2xl font-bold text-primary">
-                AffiliatePro
-              </Link>
-              <p className="text-sm text-muted-foreground">Manage Categories</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-secondary/50 transition"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
-          </div>
-        </div>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-7">
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          Categories
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Organize products across the storefront.
+        </p>
       </div>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">Add New Category</h2>
-          <form onSubmit={handleAddCategory} className="flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="categoryName" className="sr-only">Category Name</Label>
+      <main className="pb-8 space-y-6">
+        {/* Add category */}
+        <Card className="glass rounded-2xl p-5 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Plus className="w-4.5 h-4.5" />
+            </span>
+            <div>
+              <h2 className="text-[15px] font-bold leading-none">Add new category</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Slug is generated automatically from the name.
+              </p>
+            </div>
+          </div>
+          <form onSubmit={handleAddCategory} className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Label htmlFor="categoryName" className="sr-only">
+                Category Name
+              </Label>
               <Input
                 id="categoryName"
                 placeholder="e.g. Smart Home"
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
+                className="h-11 rounded-xl bg-background/80"
               />
+              {newCategory.trim() && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded-md">
+                  {newCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}
+                </span>
+              )}
             </div>
-            <Button type="submit" disabled={!newCategory.trim()}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add
+            <Button
+              type="submit"
+              disabled={!newCategory.trim()}
+              className="h-11 rounded-xl font-bold shadow-md shadow-primary/20 gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Category
             </Button>
           </form>
         </Card>
 
         {loading ? (
-          <div className="flex justify-center py-12">
+          <div className="flex justify-center py-14">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : error ? (
-          <div className="text-center py-12 text-destructive">{error}</div>
+          <Card className="p-6 text-center text-destructive">{error}</Card>
         ) : categories.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            No categories found. Add one to get started.
-          </div>
+          <Card className="p-10 text-center rounded-2xl">
+            <span className="inline-flex w-14 h-14 rounded-2xl bg-primary/10 text-primary items-center justify-center mb-4">
+              <LayoutGrid className="w-6 h-6" />
+            </span>
+            <p className="font-bold mb-1">No categories yet</p>
+            <p className="text-sm text-muted-foreground">
+              Add your first category above to organize products.
+            </p>
+          </Card>
         ) : (
-          <div className="grid gap-4">
-            {categories.map((category) => (
-              <Card key={category.id} className="p-4 flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium">{category.name}</h3>
-                  <p className="text-xs text-muted-foreground">Slug: {category.slug}</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => handleDelete(category.id)}
+          <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+            {categories.map((category) => {
+              const used = counts[category.slug.toLowerCase()] ?? 0;
+              return (
+                <Card
+                  key={category.id}
+                  className="group p-4 sm:p-5 rounded-2xl flex items-center justify-between gap-4 hover:border-primary/30 hover:shadow-md transition-all"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </Card>
-            ))}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <h3 className="font-bold text-[15px] capitalize">{category.name}</h3>
+                      {used > 0 ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          {used} {used === 1 ? "product" : "products"}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-600">
+                          unused
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
+                      /products?category={category.slug}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Delete ${category.name}`}
+                    className="shrink-0 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 rounded-xl"
+                    onClick={() => handleDelete(category.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
     </div>
-  )
+  );
 }

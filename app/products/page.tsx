@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import React, { Suspense } from "react";import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,10 +33,21 @@ interface Category {
 }
 
 export default function ProductsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductsListing />
+    </Suspense>
+  );
+}
+
+function ProductsListing() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    searchParams.get("category") || "all",
+  );
   const [categories, setCategories] = useState<string[]>(["all"]);
 
   useEffect(() => {
@@ -235,7 +247,7 @@ function ProductCard({ product }: { product: Product }) {
         {/* CTA */}
         <div className="flex gap-2.5 pt-4 border-t border-border/60">
           <Link href={`/products/${product.slug || product.id}`} className="flex-1">
-            <Button variant="outline" className="w-full h-11 bg-transparent rounded-xl font-semibold">
+            <Button className="w-full h-11 rounded-xl font-bold bg-primary hover:bg-primary/90">
               View Details
             </Button>
           </Link>
@@ -246,7 +258,7 @@ function ProductCard({ product }: { product: Product }) {
               rel="noopener noreferrer"
               aria-label={`Buy ${product.name} now`}
             >
-              <Button className="h-11 gap-2 px-4 rounded-xl font-semibold shadow-md shadow-primary/20">
+              <Button className="h-11 gap-2 px-4 rounded-xl font-bold shadow-md shadow-primary/20">
                 Buy Now
                 <ExternalLink className="w-4 h-4" />
               </Button>

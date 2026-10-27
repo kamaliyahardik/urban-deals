@@ -5,6 +5,7 @@ import { Loader2, Sparkles, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { ProductDraft } from "@/lib/product-fetcher";
+import { getAdminToken } from "@/lib/admin-auth";
 
 interface Props {
   /** Called when admin clicks "Use These Details"; receives fetched draft + final URL */
@@ -24,7 +25,7 @@ export function AutoFetchBar({ onFilled }: Props) {
     setDraft(null);
     setLoading(true);
     try {
-      const token = localStorage.getItem("adminToken");
+      const token = getAdminToken();
       const res = await fetch("/api/admin/fetch-product", {
         method: "POST",
         headers: {
