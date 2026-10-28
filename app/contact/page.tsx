@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Reveal, PageHero } from "@/components/page-parts";
+import Breadcrumb from "@/components/breadcrumb";
 import {
   Mail,
   Timer,
@@ -90,6 +91,7 @@ export default function ContactPage() {
     <div className="pb-24">
       {/* ── hero ── */}
       <PageHero
+        breadcrumb={<Breadcrumb items={[{ label: "Contact" }]} />}
         eyebrow="Contact"
         eyebrowIcon={MessageCircle}
         title="We read everything. Really."

@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { ArrowRight, FileText } from "lucide-react";
 import { PageHero, Reveal } from "@/components/page-parts";
+import Breadcrumb from "@/components/breadcrumb";
 
 export interface LegalSection {
   id: string;
@@ -83,6 +84,7 @@ export function LegalPage({
       </div>
 
       <PageHero
+        breadcrumb={<Breadcrumb items={[{ label: title }]} />}
         eyebrow={eyebrow}
         eyebrowIcon={FileText}
         title={title}

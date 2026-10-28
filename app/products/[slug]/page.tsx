@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import DealCard from "@/components/deal-card";
+import { Reveal } from "@/components/page-parts";
+import Breadcrumb from "@/components/breadcrumb";
 import {
   ExternalLink,
   ChevronLeft,
@@ -17,6 +20,9 @@ import {
   Table2,
   MessagesSquare,
   ShoppingBag,
+  ShieldCheck,
+  BadgeCheck,
+  BellRing,
 } from "lucide-react";
 
 interface Product {
@@ -62,6 +68,9 @@ interface RelatedProduct {
   image_url: string;
   price: number;
   rating?: number | null;
+  mrp?: number | null;
+  discount_percent?: number | null;
+  source?: string | null;
 }
 
 /** Strip size variants so the same photo never shows twice. */
@@ -114,11 +123,16 @@ function SectionCard({
 }) {
   return (
     <section
-      className={`bg-card/80 backdrop-blur border border-border/60 rounded-3xl p-5 sm:p-8 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-500 ${className}`}
+      className={`relative bg-card/80 backdrop-blur border border-border/60 rounded-3xl p-5 sm:p-8 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500 ${className}`}
     >
+      {/* top hairline accent */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+      />
       <div className="flex items-center justify-between mb-5 sm:mb-6">
         <div className="flex items-center gap-3">
-          <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shadow-md shadow-violet-500/25">
+          <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-violet-400 text-white flex items-center justify-center shadow-md shadow-primary/25">
             {icon}
           </span>
           <h2 className="text-lg sm:text-2xl font-bold tracking-tight">{title}</h2>
@@ -199,7 +213,7 @@ export default function ProductDetailPage() {
             const [relRes, catRes] = await Promise.all([
               supabase
                 .from("products")
-                .select("id, name, slug, image_url, price, rating")
+                .select("id, name, slug, image_url, price, rating, mrp, discount_percent, source")
                 .eq("category", productData.category)
                 .neq("id", productData.id)
                 .limit(4),
@@ -283,195 +297,230 @@ export default function ProductDetailPage() {
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40 pb-24 lg:pb-20">
       {/* ── Breadcrumb ─────────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 pt-28">
-        <nav className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground flex-wrap min-w-0">
-          <Link href="/" className="hover:text-primary hover:underline underline-offset-2 shrink-0">
-            Home
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
-          {category ? (
-            <>
-              <Link
-                href={`/category/${category.slug}`}
-                className="hover:text-primary underline-offset-2 hover:underline shrink-0"
-              >
-                {category.name}
-              </Link>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
-            </>
-          ) : null}
-          <span className="text-foreground font-medium truncate min-w-0">
-            {product.name}
-          </span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: "Products", href: "/products" },
+            ...(category ? [{ label: category.name, href: `/category/${category.slug}` }] : []),
+            { label: product.name },
+          ]}
+        />
       </div>
 
-      {/* ── Hero: gallery + buy box ────────────────────────────── */}
+      {/* ── Product stage ──────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-6">
-        <div className="grid lg:grid-cols-[minmax(0,46%)_1fr] gap-6 sm:gap-10 lg:gap-14">
-          {/* Gallery */}
-          <div className="animate-in fade-in duration-500 mx-auto w-full max-w-[320px] sm:max-w-[400px] lg:max-w-none">
-            <div className="relative group aspect-square rounded-3xl overflow-hidden border border-border/60 shadow-xl bg-gradient-to-br from-white via-white to-primary/[0.05]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                key={galleryIndex}
-                src={gallery[galleryIndex] || "/placeholder.svg"}
-                alt={`${product.name} — view ${galleryIndex + 1}`}
-                className="w-full h-full object-contain p-6 sm:p-10 lg:p-14 transition-transform duration-500 ease-out group-hover:scale-[1.07]"
-              />
-              {gallery.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    aria-label="Previous image"
-                    onClick={() => setGalleryIndex((i) => (i - 1 + gallery.length) % gallery.length)}
-                    className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 rounded-full glass shadow hover:scale-110 active:scale-95 transition"
-                  >
-                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next image"
-                    onClick={() => setGalleryIndex((i) => (i + 1) % gallery.length)}
-                    className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 rounded-full glass shadow hover:scale-110 active:scale-95 transition"
-                  >
-                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <div className="flex items-center justify-center gap-1.5 absolute bottom-3.5 sm:bottom-4 left-1/2 -translate-x-1/2">
-                    {gallery.map((_, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        aria-label={`Go to image ${i + 1}`}
-                        onClick={() => setGalleryIndex(i)}
-                        className={`h-1.5 rounded-full transition-all ${
-                          i === galleryIndex
-                            ? "w-6 bg-primary"
-                            : "w-1.5 bg-foreground/25 hover:bg-foreground/40"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-              {product.discount_percent != null && product.discount_percent > 0 && (
-                <span className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs sm:text-sm font-bold tracking-wide shadow-lg shadow-emerald-600/25">
-                  {product.discount_percent}% OFF
-                </span>
-              )}
-            </div>
+        <div className="relative rounded-[2rem] sm:rounded-[2.5rem] border border-border/60 bg-gradient-to-br from-white via-white to-primary/[0.05] shadow-sm overflow-hidden">
+          {/* decorative blobs */}
+          <div
+            aria-hidden="true"
+            className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-primary/[0.06] blur-3xl pointer-events-none"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute -bottom-28 -left-20 w-80 h-80 rounded-full bg-violet-400/[0.07] blur-3xl pointer-events-none"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+          />
 
-            {/* Thumbnails */}
-            {gallery.length > 1 && (
-              <div className="flex gap-2.5 sm:gap-3 mt-3 sm:mt-4 overflow-x-auto pb-2 snap-x [scrollbar-width:thin]">
-                {gallery.map((img, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setGalleryIndex(i)}
-                    className={`shrink-0 snap-start w-[64px] h-[64px] sm:w-[88px] sm:h-[88px] rounded-2xl border-2 overflow-hidden bg-gradient-to-br from-white to-primary/[0.04] transition-all ${
-                      i === galleryIndex
-                        ? "border-primary ring-2 ring-primary/20 shadow-md scale-[1.04]"
-                        : "border-border/60 hover:border-primary/40 hover:scale-[1.02]"
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img} alt="" loading="lazy" className="w-full h-full object-contain p-1.5 sm:p-2" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Buy box */}
-          <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
-            <div className="flex flex-wrap items-center gap-2 mb-2.5">
-              {category && (
-                <span className="text-sm font-bold text-primary uppercase tracking-widest">
-                  {category.name}
-                </span>
-              )}
-              {product.source && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-bold uppercase">
-                  {sourceLabel}
-                  {inStock && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
-                </span>
-              )}
-              {!inStock && (
-                <span className="px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold">
-                  Out of Stock
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold leading-tight tracking-tight mb-3 sm:mb-4">
-              {product.name}
-            </h1>
-
-            {/* Rating */}
-            {(product.rating != null || product.review_count != null) && (
-              <div className="flex flex-wrap items-center gap-2.5 mb-4 sm:mb-5">
-                {product.rating != null && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-600 text-sm font-bold">
-                    <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {product.rating}
-                  </span>
-                )}
-                <Stars value={product.rating ?? 0} />
-                {product.review_count != null && (
-                  <a
-                    href="#reviews"
-                    className="text-sm text-muted-foreground hover:text-primary hover:underline"
-                  >
-                    {product.review_count.toLocaleString("en-IN")} ratings
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* Price card */}
-            <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.06] via-transparent to-fuchsia-500/[0.04] p-4 sm:p-5 shadow-sm mb-5 sm:mb-6">
-              <div className="flex items-end flex-wrap gap-x-3 gap-y-1">
-                <span className="text-3xl sm:text-4xl font-extrabold tracking-tight flex items-start text-primary">
-                  <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 mt-1.5 sm:mt-2 mr-0.5" />
-                  {product.price.toLocaleString("en-IN")}
-                </span>
-                {product.mrp != null && product.mrp > product.price && (
-                  <span className="text-lg sm:text-xl text-muted-foreground line-through mb-1">
-                    ₹{product.mrp.toLocaleString("en-IN")}
-                  </span>
+          <div className="relative grid lg:grid-cols-[minmax(0,46%)_1fr] gap-6 sm:gap-10 lg:gap-14 p-4 sm:p-8 lg:p-10">
+            {/* Gallery */}
+            <div className="animate-in fade-in duration-500 mx-auto w-full max-w-[320px] sm:max-w-[400px] lg:max-w-none">
+              <div className="relative group aspect-square rounded-3xl overflow-hidden border border-border/60 shadow-xl bg-gradient-to-br from-white via-white to-primary/[0.06]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  key={galleryIndex}
+                  src={gallery[galleryIndex] || "/placeholder.svg"}
+                  alt={`${product.name} — view ${galleryIndex + 1}`}
+                  className="w-full h-full object-contain p-6 sm:p-10 lg:p-12 transition-transform duration-500 ease-out group-hover:scale-[1.07]"
+                />
+                {gallery.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Previous image"
+                      onClick={() => setGalleryIndex((i) => (i - 1 + gallery.length) % gallery.length)}
+                      className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 rounded-full bg-white/90 backdrop-blur border border-border/60 shadow hover:scale-110 active:scale-95 transition"
+                    >
+                      <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next image"
+                      onClick={() => setGalleryIndex((i) => (i + 1) % gallery.length)}
+                      className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 rounded-full bg-white/90 backdrop-blur border border-border/60 shadow hover:scale-110 active:scale-95 transition"
+                    >
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                    <div className="flex items-center justify-center gap-1.5 absolute bottom-3.5 sm:bottom-4 left-1/2 -translate-x-1/2">
+                      {gallery.map((_, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          aria-label={`Go to image ${i + 1}`}
+                          onClick={() => setGalleryIndex(i)}
+                          className={`h-1.5 rounded-full transition-all ${
+                            i === galleryIndex
+                              ? "w-6 bg-primary"
+                              : "w-1.5 bg-foreground/25 hover:bg-foreground/40"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
                 )}
                 {product.discount_percent != null && product.discount_percent > 0 && (
-                  <span className="text-lg sm:text-xl font-bold text-emerald-600 mb-1">
-                    {product.discount_percent}% off
+                  <span className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs sm:text-sm font-bold tracking-wide shadow-lg shadow-emerald-600/25">
+                    {product.discount_percent}% OFF
+                  </span>
+                )}
+                {product.source && (
+                  <span className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 px-2.5 py-1.5 rounded-xl bg-white/90 backdrop-blur border border-border/40 text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-muted-foreground shadow-sm">
+                    {product.source}
                   </span>
                 )}
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground mt-2">
-                {inStock
-                  ? "Price may change — use coupons & affiliate offers at checkout"
-                  : "Currently unavailable — check the store for equivalents"}
-                {product.sku && <span className="ml-2">· Ref: {product.sku}</span>}
-              </p>
+
+              {/* Thumbnails */}
+              {gallery.length > 1 && (
+                <div className="flex gap-2.5 sm:gap-3 mt-3 sm:mt-4 overflow-x-auto pb-2 snap-x [scrollbar-width:thin]">
+                  {gallery.map((img, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setGalleryIndex(i)}
+                      className={`shrink-0 snap-start w-[64px] h-[64px] sm:w-[88px] sm:h-[88px] rounded-2xl border-2 overflow-hidden bg-gradient-to-br from-white to-primary/[0.04] transition-all ${
+                        i === galleryIndex
+                          ? "border-primary ring-2 ring-primary/20 shadow-md scale-[1.04]"
+                          : "border-border/60 hover:border-primary/40 hover:scale-[1.02]"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img} alt="" loading="lazy" className="w-full h-full object-contain p-1.5 sm:p-2" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* CTA — one consistent design across the whole page */}
-            <div className="mb-2">
-              <Button
-                size="lg"
-                disabled={!inStock}
-                className={`w-full gap-2 text-[15px] sm:text-base h-12 sm:h-14 rounded-xl font-bold shadow-md ${
-                  inStock
-                    ? "bg-primary hover:bg-primary/90 active:scale-[0.99]"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                }`}
-                onClick={() => window.open(product.affiliate_link, "_blank")}
-              >
-                {inStock ? `Buy on ${sourceLabel}` : "Currently Unavailable"}
-                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
+            {/* Buy box */}
+            <div className="flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+              <div className="flex flex-wrap items-center gap-2 mb-2.5">
+                {category && (
+                  <Link
+                    href={`/category/${category.slug}`}
+                    className="text-sm font-bold text-primary uppercase tracking-widest hover:text-primary/80 transition-colors"
+                  >
+                    {category.name}
+                  </Link>
+                )}
+                {product.source && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-bold uppercase">
+                    {sourceLabel}
+                    {inStock && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  </span>
+                )}
+                {!inStock && (
+                  <span className="px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-bold">
+                    Out of Stock
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-xl sm:text-3xl lg:text-[2.5rem] font-extrabold leading-tight tracking-tight text-balance mb-3 sm:mb-4">
+                {product.name}
+              </h1>
+
+              {/* Rating */}
+              {(product.rating != null || product.review_count != null) && (
+                <div className="flex flex-wrap items-center gap-2.5 mb-4 sm:mb-5">
+                  {product.rating != null && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-600 text-sm font-bold">
+                      <Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {product.rating}
+                    </span>
+                  )}
+                  <Stars value={product.rating ?? 0} />
+                  {product.review_count != null && (
+                    <a
+                      href="#reviews"
+                      className="text-sm text-muted-foreground hover:text-primary hover:underline"
+                    >
+                      {product.review_count.toLocaleString("en-IN")} ratings
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* Price block */}
+              <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.07] via-transparent to-violet-400/[0.05] p-4 sm:p-5 shadow-sm mb-5 sm:mb-6">
+                <div className="flex items-end flex-wrap gap-x-3 gap-y-1">
+                  <span className="text-3xl sm:text-4xl font-extrabold tracking-tight flex items-start text-primary">
+                    <IndianRupee className="w-4 h-4 sm:w-5 sm:h-5 mt-1.5 sm:mt-2 mr-0.5" />
+                    {product.price.toLocaleString("en-IN")}
+                  </span>
+                  {product.mrp != null && product.mrp > product.price && (
+                    <span className="text-lg sm:text-xl text-muted-foreground line-through mb-1">
+                      ₹{product.mrp.toLocaleString("en-IN")}
+                    </span>
+                  )}
+                  {product.discount_percent != null && product.discount_percent > 0 && (
+                    <span className="text-base sm:text-lg font-bold text-emerald-600 mb-1 flex items-center gap-1">
+                      ({product.discount_percent}% off)
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center flex-wrap gap-x-3 gap-y-1.5 mt-2.5">
+                  {product.mrp != null && product.mrp > product.price && (
+                    <span className="text-[11px] sm:text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg uppercase tracking-wide">
+                      You save ₹{(product.mrp - product.price).toLocaleString("en-IN")}
+                    </span>
+                  )}
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">
+                    {inStock
+                      ? "Price may change — use coupons & offers at checkout"
+                      : "Currently unavailable — check the store for equivalents"}
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA — one consistent design across the whole page */}
+              <div className="mb-2">
+                <Button
+                  size="lg"
+                  disabled={!inStock}
+                  className={`w-full gap-2 text-[15px] sm:text-base h-12 sm:h-14 rounded-xl font-bold shadow-lg ${
+                    inStock
+                      ? "bg-primary hover:bg-primary/90 active:scale-[0.99] shadow-primary/30"
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  }`}
+                  onClick={() => window.open(product.affiliate_link, "_blank")}
+                >
+                  {inStock ? "Buy Now" : "Currently Unavailable"}
+                  <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3 sm:mb-4">
+                You will be redirected to {sourceLabel} to complete the purchase —
+                the price stays the same for you.
+              </p>
+
+              {/* micro-trust row */}
+              <div className="flex flex-wrap gap-2 mt-auto">
+                {[
+                  { icon: ShieldCheck, text: "Official store checkout" },
+                  { icon: BadgeCheck, text: "Same price for you" },
+                  { icon: BellRing, text: "Prices re-checked" },
+                ].map((t) => (
+                  <span
+                    key={t.text}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground"
+                  >
+                    <t.icon className="w-3.5 h-3.5 text-primary" />
+                    {t.text}
+                  </span>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mb-1">
-              You will be redirected to {sourceLabel} to complete the purchase.
-            </p>
           </div>
         </div>
       </div>
@@ -634,66 +683,107 @@ export default function ProductDetailPage() {
 
         {/* Related */}
         {related.length > 0 && (
-          <SectionCard
-            title="You may also like"
-            icon={<ShoppingBag className="w-4.5 h-4.5 sm:w-5 sm:h-5" />}
-            action={
+          <section className="pb-2">
+            <div className="flex items-end justify-between gap-4 mb-6 sm:mb-8">
+              <div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-[11px] font-bold uppercase tracking-widest text-primary mb-3">
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  More like this
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                  You may also{" "}
+                  <span className="bg-gradient-to-r from-primary via-violet-400 to-primary bg-clip-text text-transparent">
+                    like.
+                  </span>
+                </h2>
+              </div>
               <Link
                 href={`/category/${product.category}`}
-                className="text-[13px] sm:text-sm font-semibold text-primary hover:underline"
+                className="group shrink-0 inline-flex items-center gap-2 rounded-full glass px-4 py-2.5 text-[13px] font-bold text-foreground/80 hover:text-primary transition-colors"
               >
                 View all
+                <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center transition-transform group-hover:translate-x-0.5">
+                  <ChevronRight className="w-3 h-3" />
+                </span>
               </Link>
-            }
-          >
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-              {related.map((rel) => (
-                <Link
-                  key={rel.id}
-                  href={`/products/${rel.slug}`}
-                  className="group rounded-2xl border border-border/60 bg-card overflow-hidden hover:shadow-xl hover:border-primary/30 hover:-translate-y-1 transition-all"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-white to-primary/[0.04]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={rel.image_url || "/placeholder.svg"}
-                      alt={rel.name}
-                      loading="lazy"
-                      className="w-full h-full object-contain p-4 sm:p-5 group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-3 sm:p-4">
-                    <p className="text-[13px] sm:text-sm font-medium line-clamp-2 leading-snug min-h-[2.5em]">
-                      {rel.name}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm sm:text-base font-bold text-primary">
-                        ₹{rel.price.toLocaleString("en-IN")}
-                      </span>
-                      {rel.rating != null && (
-                        <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          {rel.rating}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+              {related.map((rel, i) => (
+                <DealCard key={rel.id} product={rel} delay={i * 70} />
               ))}
             </div>
-          </SectionCard>
+          </section>
         )}
+
+        {/* ── Bottom CTA band ────────────────────────────────── */}
+        <Reveal>
+          <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary via-violet-500 to-violet-600 p-8 sm:p-12 text-center shadow-xl shadow-primary/25 mt-4">
+            <div
+              aria-hidden="true"
+              className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-white/10 blur-2xl pointer-events-none"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-24 -left-16 w-80 h-80 rounded-full bg-white/[0.07] blur-2xl pointer-events-none"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent"
+            />
+            <div className="relative flex flex-wrap items-center justify-center gap-2.5 mb-6">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3.5 py-1.5 text-[11px] font-bold text-white">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Official {sourceLabel} checkout
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3.5 py-1.5 text-[11px] font-bold text-white">
+                <BadgeCheck className="w-3.5 h-3.5" />
+                Same price for you
+              </span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white text-balance leading-tight">
+              Ready to grab this deal?
+            </h2>
+            <p className="text-sm sm:text-base text-white/85 mt-3 max-w-xl mx-auto leading-relaxed text-balance">
+              Straight to the official {sourceLabel} listing — no redirects, no
+              waiting, no price games.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
+              <Button
+                disabled={!inStock}
+                className={`gap-2 px-8 h-12 rounded-xl font-bold text-sm ${
+                  inStock
+                    ? "bg-white text-primary hover:bg-violet-50 shadow-lg active:scale-[0.99]"
+                    : "bg-white/40 text-white/80 cursor-not-allowed"
+                }`}
+                onClick={() => window.open(product.affiliate_link, "_blank")}
+              >
+                {inStock ? "Buy Now" : "Currently Unavailable"}
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+              {category && (
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="inline-flex items-center gap-2 border border-white/35 text-white px-7 py-3 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors"
+                >
+                  More {category.name.toLowerCase()} deals
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              )}
+            </div>
+          </div>
+        </Reveal>
       </div>
 
-      {/* ── Sticky mobile buy bar ──────────────────────────────── */}
-      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
-        <div className="glass rounded-2xl p-2.5 flex items-center gap-3 pointer-events-auto shadow-2xl">
+      {/* ── Sticky mobile buy bar (sits above the bottom dock) ─── */}
+      <div className="fixed inset-x-0 z-40 lg:hidden px-3 pb-[calc(env(safe-area-inset-bottom)+5.75rem)] pointer-events-none">
+        <div className="max-w-md mx-auto rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-2xl shadow-zinc-950/15 p-2.5 flex items-center gap-3 pointer-events-auto">
           <span className="text-xl font-extrabold text-primary shrink-0 tracking-tight flex items-start">
             <IndianRupee className="w-3.5 h-3.5 mt-1 mr-0.5" />
             {product.price.toLocaleString("en-IN")}
           </span>
           {product.mrp != null && product.mrp > product.price && (
-            <span className="text-xs text-muted-foreground line-through hidden xs:inline">
+            <span className="text-xs text-muted-foreground line-through">
               ₹{product.mrp.toLocaleString("en-IN")}
             </span>
           )}
@@ -701,7 +791,7 @@ export default function ProductDetailPage() {
             className="flex-1 h-11 rounded-xl font-bold gap-2 bg-primary hover:bg-primary/90 shadow-md shadow-primary/25"
             onClick={() => window.open(product.affiliate_link, "_blank")}
           >
-            {inStock ? `Buy on ${sourceLabel}` : "Check Deal"}
+            {inStock ? "Buy Now" : "Check Deal"}
             <ExternalLink className="w-4 h-4" />
           </Button>
         </div>

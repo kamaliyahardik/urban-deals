@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import DealCard from "@/components/deal-card";
+import Breadcrumb from "@/components/breadcrumb";
 
 /* ------------------------------ data -------------------------------- */
 
@@ -152,20 +153,14 @@ export default async function CategoryPage({
     <div className="pt-28 sm:pt-36 pb-16 sm:pb-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* breadcrumb */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-xs sm:text-[13px] text-muted-foreground mb-8 font-medium"
-        >
-          <Link href="/" className="hover:text-primary transition-colors">
-            Home
-          </Link>
-          <span className="text-border">/</span>
-          <Link href="/products" className="hover:text-primary transition-colors">
-            Products
-          </Link>
-          <span className="text-border">/</span>
-          <span className="text-foreground font-semibold">{category.name}</span>
-        </nav>
+        <div className="flex justify-center mb-8">
+          <Breadcrumb
+            items={[
+              { label: "Products", href: "/products" },
+              { label: category.name },
+            ]}
+          />
+        </div>
 
         {/* hero */}
         <header className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">

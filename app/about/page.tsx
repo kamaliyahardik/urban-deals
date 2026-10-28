@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Reveal, PageHero, Eyebrow, Accent } from "@/components/page-parts";
+import Breadcrumb from "@/components/breadcrumb";
 import {
   Sparkles,
   ShoppingBag,
@@ -203,12 +204,12 @@ export default function AboutPage() {
     <div className="pb-24">
       {/* ═══════════════════════════ HERO ═══════════════════════════ */}
       <PageHero
+        breadcrumb={<Breadcrumb items={[{ label: "About" }]} />}
         eyebrow="About Urban Deals"
         eyebrowIcon={Sparkles}
         title="Online shopping, minus the guesswork."
         accentWord="minus the guesswork"
-        sub="We're a small editorial obsessed with one question — which product is actually worth your money? Every listing here has been picked with intent, priced with context, and summarised without spin."
-      >
+        sub="We're a small editorial obsessed with one question — which product is actually worth your money? Every listing here has been picked with intent, priced with context, and summarised without spin."      >
         <Link href="/products">
           <Button size="lg" className="gap-2 rounded-xl font-bold shadow-md shadow-primary/20">
             <ShoppingBag className="w-4 h-4" />

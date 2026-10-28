@@ -15,45 +15,6 @@ interface HeroProduct {
   home_sections?: string[] | null;
 }
 
-/* ---------------------------- Count-up stat --------------------------- */
-
-function CountUp({ to, suffix }: { to: number; suffix?: string }) {
-  const [val, setVal] = React.useState(0);
-  const started = React.useRef(false);
-  const ref = React.useRef<HTMLSpanElement>(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const t0 = performance.now();
-          const duration = 1400;
-          const tick = (t: number) => {
-            const p = Math.min(1, (t - t0) / duration);
-            const eased = 1 - Math.pow(1 - p, 3);
-            setVal(Math.round(to * eased));
-            if (p < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.4 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [to]);
-
-  return (
-    <span ref={ref} className="tabular-nums">
-      {val.toLocaleString("en-IN")}
-      {suffix}
-    </span>
-  );
-}
-
 /* ------------------------- Floating product card ---------------------- */
 
 function FloatChip({
@@ -109,13 +70,6 @@ function FloatChip({
 /* -------------------------------- Hero -------------------------------- */
 
 const HEADLINE_1 = ["Discover", "products", "that"];
-
-const STATS = [
-  { value: 100, suffix: "%", label: "Honest, no-fluff reviews" },
-  { value: 12000, suffix: "+", label: "Products compared & rated" },
-  { value: 5000, suffix: "+", label: "Smart readers every month" },
-  { value: 27, suffix: "+", label: "Top brands curated daily" },
-];
 
 const FALLBACK_TICKER = [
   "Electronics",
@@ -198,19 +152,6 @@ const HeroSection = () => {
         className="animate-glow-pulse absolute left-1/2 top-0 -z-10 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
       />
 
-      {/* Badge */}
-      <div
-        className="animate-in fade-in slide-in-from-bottom-3 duration-500 flex flex-wrap items-center justify-center gap-2 pl-2 pr-4 py-1.5 rounded-full glass"
-      >
-        <span className="relative flex size-3.5 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping duration-300" />
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-600" />
-        </span>
-        <p className="text-xs sm:text-sm text-muted-foreground font-medium">
-          Trusted by 100+ smart shoppers worldwide
-        </p>
-      </div>
-
       {/* Headline */}
       <h1 className="mt-7 max-w-3xl text-center text-4xl sm:text-5xl md:text-[64px] leading-[1.08] font-extrabold tracking-tight">
         {HEADLINE_1.map((w, i) => (
@@ -224,13 +165,13 @@ const HeroSection = () => {
         ))}
         <span
           style={anim(3)}
-          className="animate-in fade-in slide-in-from-bottom-5 duration-700 inline-block mr-2 sm:mr-3 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-violet-600 bg-clip-text text-transparent text-shine"
+          className="animate-in fade-in slide-in-from-bottom-5 duration-700 inline-block mr-2 sm:mr-3 bg-gradient-to-r from-primary via-violet-400 to-primary bg-clip-text text-transparent text-shine"
         >
           truly
         </span>
         <span
           style={anim(4)}
-          className="animate-in fade-in slide-in-from-bottom-5 duration-700 inline-block bg-gradient-to-r from-violet-600 via-fuchsia-500 to-violet-600 bg-clip-text text-transparent text-shine"
+          className="animate-in fade-in slide-in-from-bottom-5 duration-700 inline-block bg-gradient-to-r from-primary via-violet-400 to-primary bg-clip-text text-transparent text-shine"
         >
           deliver.
         </span>
@@ -334,24 +275,6 @@ const HeroSection = () => {
 
       {/* Divider */}
       <div className="w-full max-w-[800px] h-[3px] mt-12 rounded-full bg-linear-to-r from-background via-primary to-background opacity-70" />
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 py-12 max-w-[930px] w-full">
-        {STATS.map((s, i) => (
-          <div
-            key={i}
-            style={anim(i)}
-            className="animate-in fade-in slide-in-from-bottom-5 duration-700 text-center group"
-          >
-            <h2 className="font-extrabold text-3xl md:text-4xl text-foreground tracking-tight group-hover:text-primary transition-colors duration-300">
-              <CountUp to={s.value} suffix={s.suffix} />
-            </h2>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1.5 max-w-[180px] mx-auto leading-snug">
-              {s.label}
-            </p>
-          </div>
-        ))}
-      </div>
 
       {/* Trending ticker */}
       <div

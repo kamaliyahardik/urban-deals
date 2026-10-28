@@ -76,6 +76,7 @@ export function Accent({ children }: { children: React.ReactNode }) {
 /* ------------------------------- Page hero ------------------------------ */
 
 export function PageHero({
+  breadcrumb,
   eyebrow,
   eyebrowIcon,
   title,
@@ -83,6 +84,7 @@ export function PageHero({
   sub,
   children,
 }: {
+  breadcrumb?: React.ReactNode;
   eyebrow: string;
   eyebrowIcon: LucideIcon;
   /** Full heading; the word that matches `accentWord` gets the gradient */
@@ -114,6 +116,7 @@ export function PageHero({
         className="absolute inset-x-0 -top-10 mx-auto w-[46rem] max-w-full h-72 rounded-full bg-primary/[0.09] blur-3xl pointer-events-none animate-glow-pulse"
       />
       <Reveal className="relative">
+        {breadcrumb && <div className="flex justify-center mb-5">{breadcrumb}</div>}
         <div className="flex justify-center mb-5">
           <Eyebrow Icon={eyebrowIcon}>{eyebrow}</Eyebrow>
         </div>
