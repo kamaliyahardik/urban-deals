@@ -36,6 +36,10 @@ export interface ProductDraft {
   reviews: ReviewDraft[];
   source: string;
   canonical_url: string;
+  /** Guessed Urban Deals category slug ("watches"…) — "" when unknown. */
+  category: string;
+  /** Raw category path found on the store page (for display/debug). */
+  breadcrumbs: string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -1024,6 +1028,186 @@ function detectSite(host: string): string {
   return "generic";
 }
 
+/* ------------------------------------------------------------------ */
+/* Category detection                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Pull category-path hints out of parsed JSON (BreadcrumbList etc.). */
+function deepCollectBreadcrumbs(node: unknown, out: string[], depth = 6): void {
+  if (!node || depth < 0) return;
+  if (Array.isArray(node)) {
+    node.forEach((c) => deepCollectBreadcrumbs(c, out, depth - 1));
+    return;
+  }
+  if (typeof node === "object") {
+    const obj = node as Record<string, unknown>;
+    if (obj["@type"] === "BreadcrumbList" && Array.isArray(obj.itemListElement)) {
+      for (const el of obj.itemListElement as Array<Record<string, unknown>>) {
+        const item = el?.item;
+        const nm =
+          typeof el?.name === "string" && (el.name as string).trim()
+            ? (el.name as string)
+            : typeof item === "object" &&
+                item &&
+                typeof (item as Record<string, unknown>).name === "string"
+              ? ((item as Record<string, unknown>).name as string)
+              : "";
+        if (nm.trim()) out.push(cleanText(nm));
+      }
+    }
+    if (typeof obj.category === "string" && obj.category.trim()) {
+      out.push(cleanText(obj.category));
+    }
+    for (const v of Object.values(obj)) deepCollectBreadcrumbs(v, out, depth - 1);
+  }
+}
+
+/** Parse every ld+json script and mine breadcrumbs from the parsed blobs. */
+function jsonLdBreadcrumbs(html: string): string[] {
+  const out: string[] = [];
+  const scriptRe =
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = scriptRe.exec(html))) {
+    try {
+      deepCollectBreadcrumbs(JSON.parse(m[1].trim()), out);
+    } catch {
+      /* ignore malformed blobs */
+    }
+  }
+  return out;
+}
+
+/** Amazon wayfinding crumbs ("Electronics › Headphones › …"). */
+function amazonBreadcrumbs(html: string): string[] {
+  const crumbs: string[] = [];
+  const block = html.match(
+    /id=["']wayfinding-breadcrumbs_feature_div["'][\s\S]{0,4000}?<\/div>/i,
+  )?.[0];
+  if (block) {
+    const aRe = /<a[^>]*>([\s\S]*?)<\/a>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = aRe.exec(block))) {
+      const t = cleanText(stripTags(m[1]));
+      if (t) crumbs.push(t);
+    }
+  }
+  if (crumbs.length) return crumbs;
+  // Fallback: "See Top 100 in Electronics" from Best Sellers Rank
+  const rank = html.match(/See Top \d+ in ([A-Za-z][A-Za-z &']{2,40})/);
+  return rank ? [cleanText(rank[1])] : [];
+}
+
+/** Myntra __myx breadcrumb-ish data. */
+function myntraBreadcrumbs(html: string): string[] {
+  const idx = html.search(/window\.__myx\s*=/);
+  if (idx < 0) return [];
+  const brace = html.indexOf("{", idx);
+  const blob = brace > -1 ? extractBalancedObject(html, brace) : null;
+  if (!blob) return [];
+  const out: string[] = [];
+  try {
+    const walk = (n: unknown, d: number): void => {
+      if (!n || d < 0 || out.length > 12) return;
+      if (Array.isArray(n)) {
+        n.forEach((c) => walk(c, d - 1));
+        return;
+      }
+      if (typeof n !== "object") return;
+      const o = n as Record<string, unknown>;
+      for (const key of ["breadcrumb", "breadcrumbs", "categoryPath", "categories"]) {
+        if (Array.isArray(o[key])) {
+          for (const el of o[key] as unknown[]) {
+            if (typeof el === "string" && el.trim()) out.push(cleanText(el));
+            else if (el && typeof el === "object") {
+              const e = el as Record<string, unknown>;
+              const nm = e.label ?? e.value ?? e.name;
+              if (typeof nm === "string" && nm.trim()) out.push(cleanText(nm));
+            }
+          }
+        }
+      }
+      for (const v of Object.values(o)) walk(v, d - 1);
+    };
+    walk(JSON.parse(blob), 5);
+  } catch {
+    /* ignore */
+  }
+  return uniqueKeepOrder(out);
+}
+
+/** Keyword map onto Urban Deals categories. */
+const CATEGORY_PATTERNS: Array<{ slug: string; re: RegExp }> = [
+  { slug: "watches", re: /watch|chronograph|analog|wearable|wrist/i },
+  {
+    slug: "electronics",
+    re: /electronics?|headphone|earbud|airpod|speaker|laptop|mobile|smartphone|tablet|charger|power\s?bank|keyboard|mouse|monitor|camera|television|smart\s?tv|audio|soundbar|trimmer|console|drone|gadget|computer/i,
+  },
+  {
+    slug: "kitchen",
+    re: /kitchen|mixer|blender|cookware|kettle|cooker|knife|dinnerware|cutlery|tiffin|fryer|induction|utensil|juicer|chopper|coffee\s?maker/i,
+  },
+  {
+    slug: "home",
+    re: /home|cushion|curtain|bedsheet|bed\s?sheet|pillow|mattress|lamp|decor|furniture|sofa|vase|planter|storage|furnishing/i,
+  },
+  {
+    slug: "cosmetic",
+    re: /beauty|cosmetic|cream|serum|lipstick|shampoo|conditioner|skin\s?care|skincare|perfume|fragrance|deodorant|makeup|lotion|soap|sunscreen|kajal|eyeliner/i,
+  },
+  {
+    slug: "fashion",
+    re: /fashion|clothing|apparel|shirt|jeans|trouser|kurti|kurta|saree|dress|jacket|hoodie|sweater|shoes|sneaker|sandal|footwear|bag|backpack|wallet|belt|handbag|ethnic/i,
+  },
+];
+
+const CRUMB_NOISE = /^(home|amazon\.?[a-z.]*|flipkart(\.com)?|myntra|offers?|all categories)$/i;
+
+/**
+ * Guess the Urban Deals category from store breadcrumbs + product name.
+ * Breadcrumbs weigh far more than the name; the deepest (last) crumb is the
+ * most specific and gets the highest weight.
+ */
+export function guessCategory(
+  crumbs: string[],
+  name: string,
+): { slug: string; matched: string } {
+  const haystacks: Array<{ text: string; w: number }> = [];
+  const kept: string[] = [];
+  for (const c of crumbs) {
+    const t = c.trim();
+    if (!t || t.length > 48 || CRUMB_NOISE.test(t)) continue;
+    if (name && t.length > 6 && name.toLowerCase().includes(t.toLowerCase())) continue;
+    kept.push(t);
+  }
+  kept.forEach((t, i) => haystacks.push({ text: t, w: 10 + 2 * i }));
+  if (name) haystacks.push({ text: name, w: 1 });
+
+  const scores = new Map<string, number>();
+  let matched = "";
+  let bestWeight = 0;
+  for (const h of haystacks) {
+    for (const { slug, re } of CATEGORY_PATTERNS) {
+      const m = h.text.match(re);
+      if (!m) continue;
+      scores.set(slug, (scores.get(slug) ?? 0) + h.w);
+      if (h.w > bestWeight) {
+        bestWeight = h.w;
+        matched = h.text === name ? `${m[0]} (name)` : h.text;
+      }
+    }
+  }
+  let slug = "";
+  let best = 0;
+  scores.forEach((v, k) => {
+    if (v > best) {
+      best = v;
+      slug = k;
+    }
+  });
+  return { slug, matched: slug ? matched : "" };
+}
+
 export async function fetchProductDraft(rawUrl: string): Promise<ProductDraft> {
   const { html, finalUrl } = await fetchHtml(rawUrl);
   let host = "";
@@ -1068,8 +1252,17 @@ export async function fetchProductDraft(rawUrl: string): Promise<ProductDraft> {
     /* ignore */
   }
 
+  // Category hints — store breadcrumbs + keyword guess
+  const crumbs = uniqueKeepOrder([
+    ...(site === "amazon" ? amazonBreadcrumbs(html) : []),
+    ...(site === "myntra" ? myntraBreadcrumbs(html) : []),
+    ...jsonLdBreadcrumbs(html),
+  ]);
+  const name = cleanProductName(merged.name);
+  const guessed = guessCategory(crumbs, name);
+
   return {
-    name: cleanProductName(merged.name),
+    name,
     description: merged.description ?? "",
     price: merged.price ?? null,
     mrp: merged.mrp ?? null,
@@ -1087,5 +1280,7 @@ export async function fetchProductDraft(rawUrl: string): Promise<ProductDraft> {
     reviews: merged.reviews ?? [],
     source: site,
     canonical_url: finalUrl,
+    category: guessed.slug,
+    breadcrumbs: crumbs,
   };
 }

@@ -110,6 +110,12 @@ function ProductFormModal({
       price: draft.price != null ? String(draft.price) : prev.price,
       image_url: draft.image_url || prev.image_url,
       affiliate_link: draft.canonical_url || prev.affiliate_link,
+      // Auto-select the detected category only when it exists in our DB
+      // categories — otherwise keep the admin's current selection.
+      category:
+        draft.category && categories.some((c) => c.slug === draft.category)
+          ? draft.category
+          : prev.category,
     }));
     setExtras({
       mrp: draft.mrp ?? null,

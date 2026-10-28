@@ -166,6 +166,15 @@ export function AutoFetchBar({ onFilled }: Props) {
                 {draft.specs.length > 0 && <span> · 📋 {draft.specs.length} specs</span>}
                 {draft.reviews.length > 0 && <span> · 💬 {draft.reviews.length} reviews</span>}
               </p>
+              {draft.category && (
+                <p className="text-xs text-muted-foreground">
+                  🗂 Category:{" "}
+                  <span className="font-semibold text-primary capitalize">
+                    {draft.category}
+                  </span>{" "}
+                  <span className="text-[11px]">(auto-selected)</span>
+                </p>
+              )}
               {draft.image_url && (
                 <p className="text-xs text-muted-foreground truncate">
                   Image: {draft.images.length > 1 ? `${draft.images.length} images (first used)` : "1 image"}
