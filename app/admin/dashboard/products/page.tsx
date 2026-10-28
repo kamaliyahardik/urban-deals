@@ -107,6 +107,7 @@ function ProductFormModal({
       ...prev,
       name: draft.name || prev.name,
       description: draft.description || prev.description,
+      price: draft.price != null ? String(draft.price) : prev.price,
       image_url: draft.image_url || prev.image_url,
       affiliate_link: draft.canonical_url || prev.affiliate_link,
     }));
@@ -295,13 +296,13 @@ function ProductFormModal({
           </button>
         </div>
 
-        {/* body */}
-        <form
-          onSubmit={handleSubmit}
-          className="overflow-y-auto px-6 py-5 space-y-6 [scrollbar-width:thin]"
-        >
+        {/* body — NOTE: AutoFetchBar must live OUTSIDE the product form.
+            A nested <form> gets dropped by the browser, which made the
+            "Fetch Details" button submit the product form instead. */}
+        <div className="overflow-y-auto px-6 py-5 space-y-6 [scrollbar-width:thin]">
           <AutoFetchBar onFilled={handleFetchFilled} />
 
+          <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm">
               {error}
@@ -496,7 +497,8 @@ function ProductFormModal({
               {mode === "add" ? "Create Product" : "Save Changes"}
             </Button>
           </div>
-        </form>
+          </form>
+        </div>
       </Card>
     </div>
   );
