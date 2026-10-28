@@ -454,7 +454,7 @@ function deepCollectImages(node: unknown, out: string[], depth = 6): void {
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
-export async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string }> {
+export async function fetchHtml(url: string, attempt = 0): Promise<{ html: string; finalUrl: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
@@ -474,6 +474,11 @@ export async function fetchHtml(url: string): Promise<{ html: string; finalUrl: 
     const finalUrl = res.url || url;
     const ct = res.headers.get("content-type") ?? "";
     if (!res.ok) {
+      // 503 = the store throttled us — usually transient. Wait a beat and retry.
+      if (res.status === 503 && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1500 + attempt * 1500));
+        return fetchHtml(url, attempt + 1);
+      }
       if (res.status === 404 || res.status === 410) {
         throw new Error(
           "Product page not found (404). The link may be wrong or the product may be discontinued.",
