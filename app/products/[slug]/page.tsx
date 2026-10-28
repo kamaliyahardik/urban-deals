@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import DealCard from "@/components/deal-card";
 import { Reveal } from "@/components/page-parts";
 import Breadcrumb from "@/components/breadcrumb";
@@ -483,21 +482,22 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* CTA — one consistent design across the whole page */}
+              {/* CTA — one consistent design across the whole page.
+                  Native <a> (not window.open) so popups never get blocked. */}
               <div className="mb-2">
-                <Button
-                  size="lg"
-                  disabled={!inStock}
-                  className={`w-full gap-2 text-[15px] sm:text-base h-12 sm:h-14 rounded-xl font-bold shadow-lg ${
+                <a
+                  href={inStock ? product.affiliate_link || "#" : undefined}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl font-bold shadow-lg transition-all h-12 text-[15px] sm:h-14 sm:text-base ${
                     inStock
-                      ? "bg-primary hover:bg-primary/90 active:scale-[0.99] shadow-primary/30"
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                      ? "bg-primary text-white hover:bg-primary/90 active:scale-[0.99] shadow-primary/30"
+                      : "pointer-events-none bg-muted text-muted-foreground cursor-not-allowed shadow-none"
                   }`}
-                  onClick={() => window.open(product.affiliate_link, "_blank")}
                 >
                   {inStock ? "Buy Now" : "Currently Unavailable"}
                   <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
+                </a>
               </div>
               <p className="text-xs text-muted-foreground mb-3 sm:mb-4">
                 You will be redirected to {sourceLabel} to complete the purchase —
@@ -749,18 +749,19 @@ export default function ProductDetailPage() {
               waiting, no price games.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-              <Button
-                disabled={!inStock}
-                className={`gap-2 px-8 h-12 rounded-xl font-bold text-sm ${
+              <a
+                href={inStock ? product.affiliate_link || "#" : undefined}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                className={`inline-flex items-center justify-center gap-2 rounded-xl font-bold text-sm px-8 h-12 transition-all ${
                   inStock
                     ? "bg-white text-primary hover:bg-violet-50 shadow-lg active:scale-[0.99]"
-                    : "bg-white/40 text-white/80 cursor-not-allowed"
+                    : "pointer-events-none bg-white/40 text-white/80 cursor-not-allowed"
                 }`}
-                onClick={() => window.open(product.affiliate_link, "_blank")}
               >
                 {inStock ? "Buy Now" : "Currently Unavailable"}
                 <ExternalLink className="w-4 h-4" />
-              </Button>
+              </a>
               {category && (
                 <Link
                   href={`/category/${category.slug}`}
@@ -787,13 +788,15 @@ export default function ProductDetailPage() {
               ₹{product.mrp.toLocaleString("en-IN")}
             </span>
           )}
-          <Button
-            className="flex-1 h-11 rounded-xl font-bold gap-2 bg-primary hover:bg-primary/90 shadow-md shadow-primary/25"
-            onClick={() => window.open(product.affiliate_link, "_blank")}
+          <a
+            href={product.affiliate_link || "#"}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl font-bold h-11 bg-primary text-white hover:bg-primary/90 shadow-md shadow-primary/25 transition-colors"
           >
             {inStock ? "Buy Now" : "Check Deal"}
             <ExternalLink className="w-4 h-4" />
-          </Button>
+          </a>
         </div>
       </div>
     </div>
