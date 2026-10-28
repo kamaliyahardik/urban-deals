@@ -451,31 +451,57 @@ function deepCollectImages(node: unknown, out: string[], depth = 6): void {
 /* Fetch with browser-ish headers                                      */
 /* ------------------------------------------------------------------ */
 
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const BROWSER_UAS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
+];
+
+/** Realistic browser-ish headers, randomized UA per request. */
+function browserHeaders(): Record<string, string> {
+  return {
+    "User-Agent": BROWSER_UAS[Math.floor(Math.random() * BROWSER_UAS.length)],
+    Accept:
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-IN,en;q=0.9",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    "Upgrade-Insecure-Requests": "1",
+    Referer: "https://www.google.com/",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+  };
+}
+
+/** Markers that the store served a captcha / block page instead of the product. */
+const BLOCK_PAGE_RE =
+  /Enter the characters you see below|api-services-support@amazon\.com|Incapsula|Just a moment...|Attention Required/i;
 
 export async function fetchHtml(url: string, attempt = 0): Promise<{ html: string; finalUrl: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
+  // Optional: when SCRAPER_API_KEY is set, retries escalate through the proxy
+  // service — datacenter IPs (Vercel etc.) get captcha'd by stores far more
+  // often than residential ones. Get a key at scraperapi.com (free tier).
+  const scraperKey = process.env.SCRAPER_API_KEY || "";
+  const viaScraper = Boolean(scraperKey) && attempt >= 1;
+  const target = viaScraper
+    ? `https://api.scraperapi.com/?api_key=${scraperKey}&country_code=in&url=${encodeURIComponent(url)}`
+    : url;
   try {
-    const res = await fetch(url, {
+    const res = await fetch(target, {
       redirect: "follow",
       signal: controller.signal,
-      headers: {
-        "User-Agent": BROWSER_UA,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-IN,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        "Upgrade-Insecure-Requests": "1",
-      },
+      headers: browserHeaders(),
     });
-    const finalUrl = res.url || url;
+    const finalUrl = viaScraper ? url : res.url || url;
     const ct = res.headers.get("content-type") ?? "";
     if (!res.ok) {
-      // 503 = the store throttled us — usually transient. Wait a beat and retry.
-      if (res.status === 503 && attempt < 2) {
+      // 503/429 = the store throttled us — usually transient. Wait a beat and retry.
+      if ((res.status === 503 || res.status === 429) && attempt < 2) {
         await new Promise((r) => setTimeout(r, 1500 + attempt * 1500));
         return fetchHtml(url, attempt + 1);
       }
@@ -492,12 +518,13 @@ export async function fetchHtml(url: string, attempt = 0): Promise<{ html: strin
       throw new Error("The URL did not return a web page.");
     }
     const html = await res.text();
-    // Bot-block detection
-    if (
-      /Enter the characters you see below|api-services-support@amazon\.com|Incapsula|Just a moment...|Attention Required/i.test(
-        html,
-      )
-    ) {
+    // Captcha/block pages sometimes return 200 — retry with a longer pause
+    // (often transient), and through the scraper proxy on the next attempt.
+    if (BLOCK_PAGE_RE.test(html)) {
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 2000 + attempt * 2500));
+        return fetchHtml(url, attempt + 1);
+      }
       throw new Error(
         "The store detected an automated request and showed a captcha/block page. Please fill the details manually or try again in a bit.",
       );
