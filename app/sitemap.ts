@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
+import { getSiteUrl } from "@/lib/site";
 
 const REST_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const REST_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+const SITE = getSiteUrl();
 
 interface Row {
   slug: string;
