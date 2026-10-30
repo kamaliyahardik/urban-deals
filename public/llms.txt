@@ -17,6 +17,7 @@ Urban Deals is a shopping deals and product review website for Amazon India. Pro
 - [Contact](https://urbandeals.hardikkamaliya.online/contact): Get in touch with the Urban Deals team.
 - [Privacy Policy](https://urbandeals.hardikkamaliya.online/privacy): How we handle user data.
 - [Disclaimer](https://urbandeals.hardikkamaliya.online/disclaimer): Affiliate disclosure and disclaimer.
+- [Diwali Deals](https://urbandeals.hardikkamaliya.online/diwali): Best Diwali gifts, watches and festive deals curated from Amazon India.
 - [Terms](https://urbandeals.hardikkamaliya.online/terms): Terms of service.
 
 ## Notes

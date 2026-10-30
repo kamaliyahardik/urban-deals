@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import DealCard from "@/components/deal-card";
 import Breadcrumb from "@/components/breadcrumb";
+import { getSiteUrl } from "@/lib/site";
 
 /* ------------------------------ data -------------------------------- */
 
@@ -84,9 +85,16 @@ export async function generateMetadata({
   const name = category?.name ?? decodeURIComponent(slug);
   const products = await getProducts(slug);
 
+  const isNamed = /^[A-Za-z\s]+$/.test(name);
+  const lower = name.toLowerCase();
+  const keywords = isNamed
+    ? [`best ${lower}`, `${lower} deals india`, `best ${lower} online`, `${lower} price in india`, `${lower} amazon india`]
+    : undefined;
+
   return {
-    title: `${name} — Best Deals & Top-Rated Picks | Urban Deals`,
-    description: `Hand-picked ${name} deals from Amazon, Flipkart & Myntra — top-rated products, real discounts and honest reviews. ${products.length} live on the shelf.`,
+    title: `${name} — Best Deals & Top-Rated Picks`,
+    description: `Best ${name} at the lowest price in India — top brands, real discounts and honest buyer reviews from Urban Deals. Grab the lowest price now on Amazon.`,
+    keywords,
     alternates: { canonical: `/category/${slug}` },
     openGraph: {
       title: `${name} deals — Urban Deals`,
@@ -149,8 +157,39 @@ export default async function CategoryPage({
     { label: "Prices", value: "Re-checked daily" },
   ];
 
+  const site = getSiteUrl();
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${category.name} deals`,
+    numberOfItems: products.length,
+    itemListElement: products.map((p, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: p.name,
+      url: `${site}/products/${p.slug}`,
+    })),
+  };
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site },
+      { "@type": "ListItem", position: 2, name: "Products", item: `${site}/products` },
+      { "@type": "ListItem", position: 3, name: category.name },
+    ],
+  };
+
   return (
     <div className="pt-28 sm:pt-36 pb-16 sm:pb-24">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* breadcrumb */}
         <div className="flex justify-center mb-8">

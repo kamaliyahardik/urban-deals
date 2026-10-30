@@ -336,6 +336,49 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-b from-background via-card/30 to-background">
       <HeroSection />
 
+      {/* ── Diwali festive guide banner ─────────────────────────── */}
+      <section className="px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20">
+        <div className="max-w-6xl mx-auto">
+          <Reveal>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-violet-500 to-violet-600 p-6 sm:p-9 shadow-xl shadow-primary/25 flex flex-col md:flex-row md:items-center gap-6 md:gap-10">
+              <div
+                aria-hidden="true"
+                className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-white/10 blur-2xl pointer-events-none"
+              />
+              <span className="relative shrink-0 w-14 h-14 rounded-2xl bg-white/15 backdrop-blur text-white flex items-center justify-center shadow-md">
+                <Sparkles className="w-7 h-7" />
+              </span>
+              <div className="relative min-w-0 flex-1">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-white">
+                  <Flame className="w-3 h-3" />
+                  Festive Guide
+                </span>
+                <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-white mt-3 text-balance leading-tight">
+                  <Link
+                    href="/diwali"
+                    className="hover:underline decoration-white/40 underline-offset-4"
+                  >
+                    Diwali gift ideas that sell themselves
+                  </Link>
+                </h2>
+                <p className="text-sm text-white/85 mt-2.5 leading-relaxed max-w-xl">
+                  The best Diwali gifts, festive watch deals and gifts under
+                  ₹500 — hand-picked from Amazon India and re-checked daily
+                  through the season.
+                </p>
+              </div>
+              <Link
+                href="/diwali"
+                className="relative shrink-0 inline-flex items-center gap-2 bg-white text-primary px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-violet-50 transition-all active:scale-95 w-full sm:w-auto justify-center"
+              >
+                Open the Diwali guide
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── Category quick browse ─────────────────────────────── */}
       <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
@@ -705,6 +748,22 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── FAQ structured data ────────────────────────────────── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQS.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
 
       {/* ── Amazon Associates disclosure ──────────────────────── */}
       <section className="px-4 sm:px-6 lg:px-8 pb-4">

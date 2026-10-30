@@ -6,7 +6,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MobileDock from "@/components/mobile-dock";
-import { getSiteUrl } from "@/lib/site";
+import { getSiteUrl, PROD_URL } from "@/lib/site";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -16,19 +16,25 @@ const SITE_URL = getSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Urban Deals — Smart Shopping, Honest Reviews | Amazon India",
+    default:
+      "Best Amazon India Deals, Reviews & Diwali Gift Guide | Urban Deals",
     template: "%s | Urban Deals",
   },
   description:
-    "Urban Deals curates top-rated Amazon India products with honest buyer reviews, real discounts and daily price checks. Compare, pick and save.",
+    "The best deals on Amazon India — top products, honest reviews, Diwali gift ideas and festive watch deals, curated with daily price checks.",
   applicationName: "Urban Deals",
   keywords: [
     "Urban Deals",
     "Amazon India deals",
+    "amazon deals india",
     "best products",
     "product reviews",
     "loot deals",
     "shopping deals India",
+    "best diwali gifts",
+    "diwali gifts 2026",
+    "diwali watches",
+    "festive deals",
   ],
   alternates: {
     canonical: SITE_URL,
@@ -37,15 +43,15 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Urban Deals",
-    title: "Urban Deals — Smart Shopping, Honest Reviews | Amazon India",
+    title: "Best Amazon India Deals, Reviews & Diwali Gift Guide | Urban Deals",
     description:
-      "Urban Deals curates top-rated Amazon India products with honest buyer reviews, real discounts and daily price checks. Compare, pick and save.",
+      "The best deals on Amazon India — top products, honest reviews, Diwali gift ideas and festive watch deals, curated with daily price checks.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Urban Deals — Smart Shopping, Honest Reviews | Amazon India",
+    title: "Best Amazon India Deals, Reviews & Diwali Gift Guide | Urban Deals",
     description:
-      "Urban Deals curates top-rated Amazon India products with honest buyer reviews, real discounts and daily price checks. Compare, pick and save.",
+      "The best deals on Amazon India — top products, honest reviews, Diwali gift ideas and festive watch deals, curated with daily price checks.",
   },
   robots: {
     index: true,
@@ -75,6 +81,32 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`} suppressHydrationWarning>
+        {/* Organization + WebSite structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                name: "Urban Deals",
+                url: PROD_URL,
+                logo: `${PROD_URL}/icon-512.png`,
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                name: "Urban Deals",
+                url: PROD_URL,
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target: `${PROD_URL}/products?q={search_term_string}`,
+                  "query-input": "required name=search_term_string",
+                },
+              },
+            ]),
+          }}
+        />
         <div className="fixed top-6 w-full flex justify-center z-50 pointer-events-none px-3">
           <div className="pointer-events-auto w-fit md:w-full max-w-4xl">
             <Navbar />
