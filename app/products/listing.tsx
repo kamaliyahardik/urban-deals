@@ -30,6 +30,7 @@ interface Product {
   category: string;
   created_at: string;
   slug: string;
+  display_order?: number | null;
   mrp?: number | null;
   discount_percent?: number | null;
   rating?: number | null;
@@ -63,6 +64,7 @@ const RATINGS = [
 ];
 
 const SORTS = [
+  { key: "featured", label: "Featured order" },
   { key: "newest", label: "Newest first" },
   { key: "price_asc", label: "Price: low → high" },
   { key: "price_desc", label: "Price: high → low" },
@@ -86,7 +88,7 @@ export default function ProductsListing() {
   const [priceBand, setPriceBand] = useState("any");
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [sort, setSort] = useState("newest");
+  const [sort, setSort] = useState("featured");
   const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -170,11 +172,23 @@ export default function ProductsListing() {
       case "discount":
         list.sort((a, b) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0));
         break;
-      default:
+      case "newest":
         list.sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
+        break;
+      default:
+        // Featured order: the admin-curated display_order, low number
+        // first. Ties/missing values fall back to newest first.
+        list.sort((a, b) => {
+          const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
+          const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrd !== bOrd) return aOrd - bOrd;
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        });
     }
     return list;
   }, [products, query, selectedCats, priceBand, minRating, inStockOnly, sort]);
@@ -193,7 +207,7 @@ export default function ProductsListing() {
     setPriceBand("any");
     setMinRating(0);
     setInStockOnly(false);
-    setSort("newest");
+    setSort("featured");
   };
 
   const activeFilterCount =

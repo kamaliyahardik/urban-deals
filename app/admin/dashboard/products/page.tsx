@@ -23,6 +23,9 @@ import {
   PackageOpen,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -42,6 +45,7 @@ interface Product {
   source?: string | null;
   created_at: string;
   home_sections?: string[] | null;
+  display_order?: number | null;
 }
 
 interface Category {
@@ -189,6 +193,18 @@ function ProductFormModal({
           slug = `${baseSlug}-${suffix++}`;
         }
 
+        // Auto order: append the new product to the bottom of the
+        // admin-curated list (admin can move it up later).
+        const { data: maxRow } = await supabase
+          .from("products")
+          .select("display_order")
+          .order("display_order", { ascending: false, nullsFirst: false })
+          .limit(1);
+        const nextOrder =
+          typeof maxRow?.[0]?.display_order === "number"
+            ? maxRow[0].display_order + 1
+            : 1;
+
         const { data: created, error: insertError } = await supabase
           .from("products")
           .insert([
@@ -201,6 +217,7 @@ function ProductFormModal({
               image_url: form.image_url,
               slug,
               home_sections: homeSections,
+              display_order: nextOrder,
               ...extras,
             },
           ])
@@ -543,7 +560,12 @@ export default function AdminProductsPage() {
     try {
       const supabase = createClient();
       const [productsRes, catsRes] = await Promise.all([
-        supabase.from("products").select("*").order("created_at", { ascending: false }),
+        // Admin-curated order: display_order low → high, then newest
+        supabase
+          .from("products")
+          .select("*")
+          .order("display_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: false }),
         supabase.from("categories").select("*").order("name", { ascending: true }),
       ]);
       if (productsRes.error) throw productsRes.error;
@@ -618,6 +640,90 @@ export default function AdminProductsPage() {
     }
   };
 
+  /* --------------- ordering (move up / move down) --------------- */
+
+  /** Admin-curated order comparator — identical to the public listing. */
+  const compareByOrder = (a: Product, b: Product) => {
+    const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
+    const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
+    if (aOrd !== bOrd) return aOrd - bOrd;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  };
+
+  /** The full product list in curated order (ignores search/filters). */
+  const orderedAll = useMemo(
+    () => [...products].sort(compareByOrder),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products],
+  );
+
+  const handleMove = async (product: Product, dir: -1 | 1) => {
+    const sorted = [...products].sort(compareByOrder);
+    const idx = sorted.findIndex((p) => p.id === product.id);
+    if (idx < 0) return;
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= sorted.length) return;
+
+    setBusyId(product.id);
+    setError(null);
+    try {
+      const supabase = createClient();
+
+      // Backfill: any product without a number yet gets a sequential one,
+      // so the swap below always operates on real integers.
+      const missing = sorted.filter((p) => p.display_order == null);
+      if (missing.length > 0) {
+        await Promise.all(
+          sorted.map((p, i) =>
+            p.display_order == null
+              ? supabase.from("products").update({ display_order: i + 1 }).eq("id", p.id)
+              : Promise.resolve({ data: null, error: null }),
+          ),
+        );
+      }
+
+      // Swap the two neighbours' order numbers.
+      const other = sorted[targetIdx];
+      const aOld = product.display_order ?? idx + 1;
+      const bOld = other.display_order ?? targetIdx + 1;
+
+      // Optimistic UI update
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === product.id) return { ...p, display_order: bOld };
+          if (p.id === other.id) return { ...p, display_order: aOld };
+          if (p.display_order == null) {
+            const seq = sorted.findIndex((s) => s.id === p.id) + 1;
+            return { ...p, display_order: seq };
+          }
+          return p;
+        }),
+      );
+
+      const [aRes, bRes] = await Promise.all([
+        supabase.from("products").update({ display_order: bOld }).eq("id", product.id).select("id"),
+        supabase.from("products").update({ display_order: aOld }).eq("id", other.id).select("id"),
+      ]);
+      if (aRes.error) throw aRes.error;
+      if (bRes.error) throw bRes.error;
+      if ((!aRes.data || aRes.data.length === 0) || (!bRes.data || bRes.data.length === 0)) {
+        throw new Error(
+          "Move failed — database is blocking writes. Run scripts/update-schema-4-rls.sql in Supabase SQL editor.",
+        );
+      }
+      // Keep the freshly fetched canonical order (also picks up backfilled rows)
+      await fetchData();
+    } catch (err) {
+      setError(
+        (err as Error)?.message ??
+          "Move failed — make sure display_order exists (scripts/update-schema-5-display-order.sql)",
+      );
+      fetchData();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
@@ -650,7 +756,7 @@ export default function AdminProductsPage() {
             Products
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Add, edit or delete — and control where each one shows on the site.
+            Add, edit or delete — and control exactly which product appears first.
           </p>
         </div>
         <Button
@@ -737,6 +843,44 @@ export default function AdminProductsPage() {
                 <div className="p-3.5 sm:p-4 flex flex-col xl:flex-row xl:items-center gap-3.5">
                   {/* identity */}
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {/* position + move up/down */}
+                    <div className="shrink-0 flex flex-col items-center gap-1">
+                      <span
+                        title={`Position ${orderedAll.findIndex((p) => p.id === product.id) + 1}`}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary text-[11px] font-extrabold text-muted-foreground"
+                      >
+                        <GripVertical className="w-3 h-3" />
+                        {orderedAll.findIndex((p) => p.id === product.id) + 1}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMove(product, -1)}
+                          disabled={
+                            orderedAll.findIndex((p) => p.id === product.id) === 0 ||
+                            busyId === product.id
+                          }
+                          aria-label={`Move ${product.name} up`}
+                          title="Move up (shows earlier on the site)"
+                          className="p-1 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMove(product, 1)}
+                          disabled={
+                            orderedAll.findIndex((p) => p.id === product.id) ===
+                              orderedAll.length - 1 || busyId === product.id
+                          }
+                          aria-label={`Move ${product.name} down`}
+                          title="Move down (shows later on the site)"
+                          className="p-1 rounded-lg border border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
                     <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-border/60 bg-gradient-to-br from-white to-primary/[0.05] overflow-hidden">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img

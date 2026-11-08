@@ -13,6 +13,7 @@ interface HeroProduct {
   price: number;
   rating: number | null;
   home_sections?: string[] | null;
+  display_order?: number | null;
 }
 
 /* ------------------------- Floating product card ---------------------- */
@@ -95,11 +96,23 @@ const HeroSection = () => {
         const supabase = createClient();
         const { data } = await supabase
           .from("products")
-          .select("id, name, slug, image_url, price, rating, home_sections")
+          .select(
+            "id, name, slug, image_url, price, rating, home_sections, display_order, created_at",
+          )
           .neq("price", 0)
           .limit(30);
         if (!alive) return;
-        const list = (data ?? []) as HeroProduct[];
+        const list = (
+          (data ?? []) as (HeroProduct & { created_at?: string | null })[]
+        ).sort((a, b) => {
+          const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
+          const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrd !== bOrd) return aOrd - bOrd;
+          return (
+            new Date(b.created_at ?? 0).getTime() -
+            new Date(a.created_at ?? 0).getTime()
+          );
+        }) as HeroProduct[];
         // Strict: hero chips ONLY for products toggled into the hero section
         const tagged = list.filter((p) =>
           (p.home_sections ?? []).includes("hero"),

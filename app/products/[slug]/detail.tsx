@@ -212,9 +212,12 @@ export default function ProductDetailClient() {
             const [relRes, catRes] = await Promise.all([
               supabase
                 .from("products")
-                .select("id, name, slug, image_url, price, rating, mrp, discount_percent, source")
+                .select(
+                  "id, name, slug, image_url, price, rating, mrp, discount_percent, source, display_order",
+                )
                 .eq("category", productData.category)
                 .neq("id", productData.id)
+                .order("display_order", { ascending: true, nullsFirst: false })
                 .limit(4),
               // resolve OUR category (admin-managed) for the breadcrumb
               supabase

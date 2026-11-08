@@ -52,6 +52,7 @@ interface Product {
   category?: string | null;
   source?: string | null;
   created_at?: string | null;
+  display_order?: number | null;
   home_sections?: string[] | null;
 }
 
@@ -307,11 +308,19 @@ export default function HomePage() {
         const { data } = await supabase
           .from("products")
           .select(
-            "id, name, slug, image_url, price, mrp, discount_percent, rating, review_count, category, source, created_at, home_sections",
+            "id, name, slug, image_url, price, mrp, discount_percent, rating, review_count, category, source, created_at, home_sections, display_order",
           )
           .neq("price", 0);
         if (!alive || !data) return;
-        const list = data as Product[];
+        const list = (data as Product[]).sort((a, b) => {
+          const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
+          const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrd !== bOrd) return aOrd - bOrd;
+          return (
+            new Date(b.created_at ?? 0).getTime() -
+            new Date(a.created_at ?? 0).getTime()
+          );
+        });
 
         // Strict admin-curation: a section shows ONLY what is toggled on
         const bySection = (tag: string) =>
