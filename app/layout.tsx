@@ -6,7 +6,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MobileDock from "@/components/mobile-dock";
-import { getSiteUrl, PROD_URL } from "@/lib/site";
+import { getSiteUrl } from "@/lib/site";
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -46,12 +46,21 @@ export const metadata: Metadata = {
     title: "Best Amazon India Deals, Reviews & Diwali Gift Guide | Urban Deals",
     description:
       "The best deals on Amazon India — top products, honest reviews, Diwali gift ideas and festive watch deals, curated with daily price checks.",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Urban Deals — Best Amazon India Deals & Reviews",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Best Amazon India Deals, Reviews & Diwali Gift Guide | Urban Deals",
     description:
       "The best deals on Amazon India — top products, honest reviews, Diwali gift ideas and festive watch deals, curated with daily price checks.",
+    images: ["/icon-512.png"],
   },
   robots: {
     index: true,
@@ -90,17 +99,19 @@ export default function RootLayout({
                 "@context": "https://schema.org",
                 "@type": "Organization",
                 name: "Urban Deals",
-                url: PROD_URL,
-                logo: `${PROD_URL}/icon-512.png`,
+                url: SITE_URL,
+                logo: `${SITE_URL}/icon-512.png`,
+                description:
+                  "Urban Deals curates top-rated Amazon India products with honest buyer reviews, real discounts and daily price checks.",
               },
               {
                 "@context": "https://schema.org",
                 "@type": "WebSite",
                 name: "Urban Deals",
-                url: PROD_URL,
+                url: SITE_URL,
                 potentialAction: {
                   "@type": "SearchAction",
-                  target: `${PROD_URL}/products?q={search_term_string}`,
+                  target: `${SITE_URL}/products?q={search_term_string}`,
                   "query-input": "required name=search_term_string",
                 },
               },

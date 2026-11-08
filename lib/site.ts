@@ -1,4 +1,4 @@
-export const PROD_URL = "https://urbandeals.hardikkamaliya.online";
+export const PROD_URL = "https://www.amznurban.store";
 
 /**
  * Returns the canonical site URL.

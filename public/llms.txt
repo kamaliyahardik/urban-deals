@@ -6,22 +6,22 @@ Urban Deals is a shopping deals and product review website for Amazon India. Pro
 
 ## Site
 
-- Homepage: https://urbandeals.hardikkamaliya.online/
-- All Products: https://urbandeals.hardikkamaliya.online/products
-- Product Pages: https://urbandeals.hardikkamaliya.online/products/{slug}
-- Category Pages: https://urbandeals.hardikkamaliya.online/category/{slug}
+- Homepage: https://www.amznurban.store/
+- All Products: https://www.amznurban.store/products
+- Product Pages: https://www.amznurban.store/products/{slug}
+- Category Pages: https://www.amznurban.store/category/{slug}
 
 ## Pages
 
-- [About](https://urbandeals.hardikkamaliya.online/about): Learn about Urban Deals and how we curate deals.
-- [Contact](https://urbandeals.hardikkamaliya.online/contact): Get in touch with the Urban Deals team.
-- [Privacy Policy](https://urbandeals.hardikkamaliya.online/privacy): How we handle user data.
-- [Disclaimer](https://urbandeals.hardikkamaliya.online/disclaimer): Affiliate disclosure and disclaimer.
-- [Diwali Deals](https://urbandeals.hardikkamaliya.online/diwali): Best Diwali gifts, watches and festive deals curated from Amazon India.
-- [Terms](https://urbandeals.hardikkamaliya.online/terms): Terms of service.
+- [About](https://www.amznurban.store/about): Learn about Urban Deals and how we curate deals.
+- [Contact](https://www.amznurban.store/contact): Get in touch with the Urban Deals team.
+- [Privacy Policy](https://www.amznurban.store/privacy): How we handle user data.
+- [Disclaimer](https://www.amznurban.store/disclaimer): Affiliate disclosure and disclaimer.
+- [Diwali Deals](https://www.amznurban.store/diwali): Best Diwali gifts, watches and festive deals curated from Amazon India.
+- [Terms](https://www.amznurban.store/terms): Terms of service.
 
 ## Notes
 
 - Urban Deals participates in the Amazon Associates affiliate program; purchases made through our links may earn us a commission at no extra cost to the buyer.
-- Sitemap: https://urbandeals.hardikkamaliya.online/sitemap.xml
+- Sitemap: https://www.amznurban.store/sitemap.xml
 - AI crawlers (GPTBot, ClaudeBot, PerplexityBot, etc.) are welcome to index product and category pages.
