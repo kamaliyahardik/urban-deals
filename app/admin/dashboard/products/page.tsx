@@ -59,6 +59,55 @@ interface FeatureValue {
   value_text: string;
 }
 
+type PlacementRow = {
+  id: number;
+  display_order: number | null;
+  created_at: string;
+};
+
+/**
+ * Plan a placement change: the product lands on `targetPos` and every
+ * product from that position onwards shifts down by exactly one spot
+ * (old #1 → #2, old #2 → #3, ...).
+ *
+ * Returns only the rows whose stored number actually changes, plus the
+ * number the moved/inserted product should get.
+ */
+function planPlacement(
+  rows: PlacementRow[],
+  targetPos: number | null,
+  selfId: number | null,
+): { updates: { id: number; order: number }[]; selfOrder: number } {
+  // canonical order: display_order asc, missing last, then newest first
+  const sorted = [...rows].sort((a, b) => {
+    const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
+    const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
+    if (aOrd !== bOrd) return aOrd - bOrd;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  const self = selfId != null ? (sorted.find((p) => p.id === selfId) ?? null) : null;
+  const others = self ? sorted.filter((p) => p.id !== self.id) : sorted;
+
+  // where the product lands (1-based → 0-based index, clamped to the end)
+  const insertIdx =
+    targetPos == null
+      ? others.length
+      : Math.max(0, Math.min(targetPos - 1, others.length));
+
+  // simulate the final lineup
+  const finalList = [...others];
+  if (self) finalList.splice(insertIdx, 0, self);
+
+  // collect only the rows whose number changed
+  const updates = finalList
+    .map((p, i) => ({ id: p.id, current: p.display_order, order: i + 1 }))
+    .filter((u) => u.current !== u.order)
+    .map((u) => ({ id: u.id, order: u.order }));
+
+  return { updates, selfOrder: insertIdx + 1 };
+}
+
 /* ------------------------- Product form modal ----------------------- */
 
 function ProductFormModal({
@@ -195,49 +244,44 @@ function ProductFormModal({
           slug = `${baseSlug}-${suffix++}`;
         }
 
-        // Placement: optional position number typed by the admin.
-        // The new product lands on that exact spot, and the product
-        // currently sitting there is pushed to the very bottom —
-        // so the admin never needs to shuffle by hand.
+        // Placement: the product lands on the exact position the admin
+        // typed; everyone from that position onwards shifts down by one
+        // (old #1 → #2, old #2 → #3, ...).
         const { data: allRows } = await supabase
           .from("products")
           .select("id, display_order, created_at");
-        const allRowsList = (allRows ?? []) as {
-          id: number;
-          display_order: number | null;
-          created_at: string;
-        }[];
-        const sortedAll = [...allRowsList].sort(
-          (a, b) => {
-            const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
-            const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
-            if (aOrd !== bOrd) return aOrd - bOrd;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          },
-        );
-        const maxOrder = allRowsList.reduce(
-          (m, p) => Math.max(m, p.display_order ?? 0),
-          0,
-        );
 
-        let insertOrder = maxOrder + 1; // default: append at the end
         const requestedPos = parseInt(position.trim(), 10);
-        if (!isNaN(requestedPos) && requestedPos >= 1 && sortedAll.length > 0) {
-          insertOrder = Math.min(requestedPos, sortedAll.length + 1);
-          // push the current occupant of that spot to the bottom
-          if (insertOrder <= sortedAll.length) {
-            const occupant = sortedAll[insertOrder - 1];
-            if (occupant) {
-              const bumpRes = await supabase
+        const targetPos =
+          !isNaN(requestedPos) && requestedPos >= 1 ? requestedPos : null;
+
+        const { updates: planned, selfOrder } = planPlacement(
+          (allRows ?? []) as PlacementRow[],
+          targetPos,
+          null,
+        );
+        const nextOrder = selfOrder;
+
+        // shift the others first so the spot is free
+        if (planned.length > 0) {
+          const results = await Promise.all(
+            planned.map((u) =>
+              supabase
                 .from("products")
-                .update({ display_order: maxOrder + 1 })
-                .eq("id", occupant.id)
-                .select("id");
-              if (bumpRes.error) throw bumpRes.error;
-            }
+                .update({ display_order: u.order })
+                .eq("id", u.id)
+                .select("id"),
+            ),
+          );
+          const failed = results.find(
+            (r) => r.error || !r.data || r.data.length === 0,
+          );
+          if (failed) {
+            throw new Error(
+              "Reorder failed — database is blocking writes. Run scripts/update-schema-4-rls.sql in Supabase SQL editor.",
+            );
           }
         }
-        const nextOrder = insertOrder;
 
         const { data: created, error: insertError } = await supabase
           .from("products")
@@ -297,45 +341,38 @@ function ProductFormModal({
           );
         }
 
-        // Optional re-placement: move this product to an explicit
-        // position; whoever sits there is pushed to the very bottom.
+        // Optional re-placement: this product moves to the exact
+        // position typed; everyone from that position onwards shifts
+        // down by one (old #1 → #2, old #2 → #3, ...).
         const requestedPosEdit = parseInt(position.trim(), 10);
         if (!isNaN(requestedPosEdit) && requestedPosEdit >= 1) {
           const { data: editRows } = await supabase
             .from("products")
             .select("id, display_order, created_at");
-          const editList = (editRows ?? []) as {
-            id: number;
-            display_order: number | null;
-            created_at: string;
-          }[];
-          const sortedEdit = [...editList].sort((a, b) => {
-            const aOrd = a.display_order ?? Number.MAX_SAFE_INTEGER;
-            const bOrd = b.display_order ?? Number.MAX_SAFE_INTEGER;
-            if (aOrd !== bOrd) return aOrd - bOrd;
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-          const maxOrderEdit = editList.reduce(
-            (m, p) => Math.max(m, p.display_order ?? 0),
-            0,
+          const { updates: plannedEdit } = planPlacement(
+            (editRows ?? []) as PlacementRow[],
+            requestedPosEdit,
+            product!.id,
           );
-          const target = Math.min(requestedPosEdit, sortedEdit.length + 1);
-          const occupant =
-            target <= sortedEdit.length ? sortedEdit[target - 1] : null;
-          if (occupant && occupant.id !== product!.id) {
-            const bumpRes = await supabase
-              .from("products")
-              .update({ display_order: maxOrderEdit + 1 })
-              .eq("id", occupant.id)
-              .select("id");
-            if (bumpRes.error) throw bumpRes.error;
+          if (plannedEdit.length > 0) {
+            const results = await Promise.all(
+              plannedEdit.map((u) =>
+                supabase
+                  .from("products")
+                  .update({ display_order: u.order })
+                  .eq("id", u.id)
+                  .select("id"),
+              ),
+            );
+            const failed = results.find(
+              (r) => r.error || !r.data || r.data.length === 0,
+            );
+            if (failed) {
+              throw new Error(
+                "Reorder failed — database is blocking writes. Run scripts/update-schema-4-rls.sql in Supabase SQL editor.",
+              );
+            }
           }
-          const moveRes = await supabase
-            .from("products")
-            .update({ display_order: target })
-            .eq("id", product!.id)
-            .select("id");
-          if (moveRes.error) throw moveRes.error;
         }
 
         const valuesToInsert = newValues
@@ -505,8 +542,8 @@ function ProductFormModal({
             <h3 className="text-sm font-bold mb-1">Placement on the site</h3>
             <p className="text-xs text-muted-foreground mb-3">
               {mode === "add"
-                ? "Optional — type a position number (1 = very top). The product currently at that spot moves to the bottom automatically. Leave empty to just add at the end."
-                : "Optional — type a position number (1 = very top) and Save. The product currently at that spot moves to the bottom automatically. Leave empty to keep it where it is."}
+                ? "Optional — type a position number (1 = very top). Products from that position onwards shift down by one automatically. Leave empty to just add at the end."
+                : "Optional — type a position number (1 = very top) and Save. Products from that position onwards shift down by one automatically. Leave empty to keep it where it is."}
             </p>
             <input
               type="number"
